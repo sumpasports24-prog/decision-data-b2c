@@ -6,14 +6,16 @@ memoria al final. Documenta el uso real de IA, incluidos los errores y las corre
 ## Herramientas usadas
 
 - **Claude.ai (conversación previa, fuera de este repositorio):** el candidato definió ahí el
-  problema, el usuario objetivo, la propuesta de valor y una primera versión de la arquitectura,
-  antes de empezar a programar. El resultado de esa conversación es
-  [`docs/BRIEF-decision-data.md`](docs/BRIEF-decision-data.md), que sirvió como especificación de
-  entrada para todo el desarrollo posterior. (Nota técnica: durante esta sesión se intentó releer
-  esa conversación desde su enlace compartido para citarla con más detalle, pero el enlace de
-  `claude.ai/share/...` es una SPA que no expone su contenido a una lectura automatizada sin
-  navegador — solo se pudo confirmar que el correo de invitación original de Decision Data,
-  adjunto como capturas en `docs/preview_*.webp`, es consistente con el brief.)
+  problema, el usuario objetivo, la propuesta de valor, la arquitectura y el diseño visual, antes
+  de empezar a programar. Esa conversación produjo cuatro artifacts: el brief
+  ([`docs/BRIEF-decision-data.md`](docs/BRIEF-decision-data.md)), una bitácora completa de las
+  decisiones tomadas y descartadas, un prototipo interactivo descartado ("Horizonte", un dashboard
+  informativo — descartado precisamente por ser solo informativo, sin agentes), y un canvas de
+  diseño ("Decision Data — Motor de Casos") con los mockups reales de Panorama, Caso, Estados y
+  Móvil. El enlace compartido de esa conversación (`claude.ai/share/...`) no se pudo releer
+  directamente en esta sesión porque es una SPA sin contenido accesible sin navegador; sí se
+  pudieron leer los cuatro artifacts guardados en la cuenta del candidato, que es de donde salió
+  todo lo anterior.
 - **Claude Code (Sonnet 5), en esta sesión:** escribió la totalidad del código de este
   repositorio — backend, frontend, Docker, tests y esta documentación — en conversación directa
   con el candidato, quien revisó cada pieza, tomó las decisiones de producto/alcance, y verificó
@@ -101,6 +103,27 @@ Todos verificables en el historial de commits y en la propia base de código:
     conexión a MySQL sí funcione. El contenedor `worker` se quedaba en un loop infinito de
     "Esperando a la base de datos...". Corrección: sondar con una conexión PDO directa en vez de un
     comando que hace trabajo de más; se instaló `intl` de todas formas por si algo más lo necesita.
+11. **El primer frontend no seguía el diseño ya aprobado.** La IA construyó una primera versión de
+    Panorama y Caso a partir del brief y su propio criterio de diseño, sin haber leído el canvas de
+    Claude Design ("Decision Data — Motor de Casos") que ya existía con los mockups reales, porque
+    esa lectura requiere una llamada explícita al Artifact tool que nadie había hecho todavía. El
+    candidato lo notó ("el diseño propuesto es otro") al comparar lo construido con lo que recordaba
+    haber diseñado. Corrección: se leyeron los 9 archivos del canvas real y se reconstruyó el
+    frontend para que calzara — nav superior con 3 secciones y avatar, layout de dos columnas,
+    stepper de 5 estados, indicador "vigilancia activa", y la nota de fase 2 del Vocero directamente
+    en la interfaz (antes solo estaba en el README, y el brief exige declararlo en tres lugares).
+    Lección operativa: cuando existe una fase previa de diseño en Claude.ai, hay que pedir y leer
+    sus artifacts *antes* de escribir la primera pantalla, no confiar en que el brief textual basta.
+12. **El frontend no era accesible fuera de la máquina donde corre.** `VITE_API_URL` se resolvía en
+    build-time a `http://localhost:8000/api`. Al abrir el frontend desde otro dispositivo en la red
+    (reportado por el candidato probando desde su celular), "localhost" apuntaba al propio
+    dispositivo, no al servidor, y el login nunca conectaba. Corrección: si no se fija explícitamente,
+    la URL de la API se calcula en runtime con `window.location.hostname`, así la misma build sirve
+    por `localhost`, por IP de red o por un dominio real sin reconfigurar nada.
+13. **El stepper de 5 estados se cortaba en móvil.** "Detecta…", "Notifica…", "Autoriza…" — cinco
+    píldoras no caben legibles en 390px. Se detectó con las capturas de Playwright en viewport móvil,
+    no revisando el código. Corrección: en pantallas angostas colapsa a una sola etiqueta (el estado
+    actual) más una barra de progreso "2/5", en vez de intentar comprimir el texto de las 5.
 
 ## Pruebas y controles usados para verificar calidad y seguridad
 
