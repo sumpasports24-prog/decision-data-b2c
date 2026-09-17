@@ -1,0 +1,77 @@
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-decision_data}
+      MYSQL_USER: ${DB_USERNAME:-decision_data}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-decision_data}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-decision_data}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD:-decision_data}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: ./backend
+    env_file: ./backend/.env
+    environment:
+      DB_HOST: mysql
+      REDIS_HOST: redis
+    ports:
+      - "8000:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8000/up"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+  worker:
+    build: ./backend
+    env_file: ./backend/.env
+    environment:
+      DB_HOST: mysql
+      REDIS_HOST: redis
+    command: ["php", "artisan", "queue:work", "--tries=3", "--sleep=1"]
+    depends_on:
+      app:
+        condition: service_healthy
+
+  scheduler:
+    build: ./backend
+    env_file: ./backend/.env
+    environment:
+      DB_HOST: mysql
+      REDIS_HOST: redis
+    command: ["php", "artisan", "schedule:work"]
+    depends_on:
+      app:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    env_file: ./frontend/.env
+    ports:
+      - "5173:5173"
+    depends_on:
+      app:
+        condition: service_healthy
+
+volumes:
+  mysql_data:

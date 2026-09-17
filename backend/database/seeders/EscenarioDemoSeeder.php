@@ -23,6 +23,12 @@ class EscenarioDemoSeeder extends Seeder
 {
     public function run(): void
     {
+        // Idempotente: en Docker el contenedor `app` corre este seeder en cada
+        // arranque. Si ya hay datos, no duplica nada.
+        if (Persona::query()->exists()) {
+            return;
+        }
+
         $motor = app(CaseStateMachine::class);
 
         // --- Persona principal de la demo -------------------------------
