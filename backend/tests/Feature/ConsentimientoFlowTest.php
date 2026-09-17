@@ -1,0 +1,81 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Domain\Casos\CasoEstado;
+use App\Models\Caso;
+use App\Models\Persona;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class ConsentimientoFlowTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_login_por_cedula_emite_token_para_una_persona_sembrada(): void
+    {
+        $cedula = '1710034065';
+        $persona = Persona::factory()->create(['cedula_hash' => Persona::hashCedula($cedula)]);
+
+        $respuesta = $this->postJson('/api/auth/login', ['cedula' => $cedula]);
+
+        $respuesta->assertOk()->assertJsonStructure(['token', 'persona' => ['id', 'nombre']]);
+        $this->assertSame($persona->id, $respuesta->json('persona.id'));
+    }
+
+    public function test_login_rechaza_una_cedula_mal_formada_con_mensaje_especifico(): void
+    {
+        $this->postJson('/api/auth/login', ['cedula' => '123'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('cedula');
+    }
+
+    public function test_login_con_cedula_valida_pero_desconocida_responde_404(): void
+    {
+        $this->postJson('/api/auth/login', ['cedula' => '1710034065'])->assertStatus(404);
+    }
+
+    public function test_firmar_consentimiento_autoriza_el_caso_y_dispara_la_gestion_en_cola(): void
+    {
+        $persona = Persona::factory()->create();
+        $caso = Caso::factory()->enEstado(CasoEstado::Notificado)->create(['persona_id' => $persona->id]);
+
+        $respuesta = $this->actingAs($persona, 'sanctum')
+            ->postJson("/api/casos/{$caso->id}/consentimiento");
+
+        $respuesta->assertStatus(201);
+        $this->assertSame(CasoEstado::EnGestion, $caso->refresh()->estado); // queue sync en testing
+        $this->assertDatabaseHas('documentos', ['caso_id' => $caso->id, 'tipo' => 'oposicion_lopdp']);
+    }
+
+    public function test_una_persona_no_puede_leer_el_caso_de_otra(): void
+    {
+        $intruso = Persona::factory()->create();
+        $caso = Caso::factory()->create();
+
+        $this->actingAs($intruso, 'sanctum')
+            ->getJson("/api/casos/{$caso->id}")
+            ->assertStatus(403);
+    }
+
+    public function test_revocar_un_consentimiento_es_idempotente(): void
+    {
+        $persona = Persona::factory()->create();
+        $caso = Caso::factory()->enEstado(CasoEstado::EnGestion)->create(['persona_id' => $persona->id]);
+        $consentimiento = \App\Models\Consentimiento::factory()->create(['caso_id' => $caso->id]);
+
+        $this->actingAs($persona, 'sanctum')
+            ->postJson("/api/consentimientos/{$consentimiento->id}/revocar")
+            ->assertOk();
+
+        $this->assertNotNull($consentimiento->refresh()->revocado_en);
+
+        // Segunda llamada: no debe fallar ni duplicar el evento.
+        $this->actingAs($persona, 'sanctum')
+            ->postJson("/api/consentimientos/{$consentimiento->id}/revocar")
+            ->assertOk();
+
+        $this->assertSame(1, \App\Models\Evento::where('caso_id', $caso->id)
+            ->where('tipo', 'consentimiento_revocado')->count());
+    }
+}

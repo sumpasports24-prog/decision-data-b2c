@@ -1,6 +1,16 @@
 <?php
 
 return [
+    // Texto exacto que la persona autoriza al firmar. Si cambia, se sube la
+    // versión: los consentimientos ya firmados guardan la versión que aceptaron,
+    // nunca una referencia mutable a este valor.
+    'texto_consentimiento' => [
+        'version' => 'v1',
+        'texto' => 'Autorizo a Decision Data a presentar, en mi nombre, una oposición al '
+            .'tratamiento de datos personales (LOPDP) ante la entidad reportante de este caso, '
+            .'y a dar seguimiento al trámite hasta su resolución o escalamiento.',
+    ],
+
     // Conmutable sin credenciales de Meta: 'log' (default) escribe el mensaje
     // en el log de la app; 'whatsapp' llama a la Meta Cloud API de verdad.
     'notification_driver' => env('NOTIFICATION_DRIVER', 'log'),
