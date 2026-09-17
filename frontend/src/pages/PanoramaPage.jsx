@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, Building2 } from 'lucide-react';
+import { AlertTriangle, Building2, RadioTower } from 'lucide-react';
 import { apiFetch, SesionExpiradaError } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { EstadoCarga } from '../components/EstadoCarga';
 import { EstadoVacio } from '../components/EstadoVacio';
 import { EstadoFalla } from '../components/EstadoFalla';
@@ -11,31 +12,64 @@ import { Nav } from '../components/Nav';
 import { PuntajeGauge } from '../components/PuntajeGauge';
 import { VigilanciaActiva } from '../components/VigilanciaActiva';
 
+const ETIQUETAS_ESTADO = {
+  detectado: 'Detectado',
+  notificado: 'Notificado',
+  autorizado: 'Autorizado',
+  en_gestion: 'En gestión',
+  escalado: 'Escalado',
+  resuelto: 'Resuelto',
+};
+
+const INTERVALO_ACTUALIZACION_MS = 8000;
+
 export function PanoramaPage() {
   const [datos, setDatos] = useState(null);
   const [error, setError] = useState(null);
   const [cargando, setCargando] = useState(true);
+  const [ultimaActualizacion, setUltimaActualizacion] = useState(null);
   const { sesionExpirada } = useAuth();
+  const { mostrarToast } = useToast();
+  const casosConocidos = useRef(null);
 
-  const cargar = useCallback(async () => {
-    setCargando(true);
-    setError(null);
-    try {
-      const respuesta = await apiFetch('/panorama');
-      setDatos(respuesta);
-    } catch (err) {
-      if (err instanceof SesionExpiradaError) {
-        sesionExpirada();
-        return;
+  const cargar = useCallback(
+    async ({ enSilencio = false } = {}) => {
+      if (!enSilencio) setCargando(true);
+      setError(null);
+      try {
+        const respuesta = await apiFetch('/panorama');
+
+        if (casosConocidos.current) {
+          for (const caso of respuesta.casos) {
+            const estadoPrevio = casosConocidos.current.get(caso.id);
+            if (estadoPrevio === undefined) {
+              mostrarToast(`El Centinela detectó un caso nuevo: ${caso.consulta?.entidad_nombre}.`);
+            } else if (estadoPrevio !== caso.estado) {
+              mostrarToast(`${caso.consulta?.entidad_nombre} pasó a "${ETIQUETAS_ESTADO[caso.estado] ?? caso.estado}".`);
+            }
+          }
+        }
+        casosConocidos.current = new Map(respuesta.casos.map((c) => [c.id, c.estado]));
+
+        setDatos(respuesta);
+        setUltimaActualizacion(new Date());
+      } catch (err) {
+        if (err instanceof SesionExpiradaError) {
+          sesionExpirada();
+          return;
+        }
+        if (!enSilencio) setError(err);
+      } finally {
+        if (!enSilencio) setCargando(false);
       }
-      setError(err);
-    } finally {
-      setCargando(false);
-    }
-  }, [sesionExpirada]);
+    },
+    [sesionExpirada, mostrarToast],
+  );
 
   useEffect(() => {
     cargar();
+    const intervalo = setInterval(() => cargar({ enSilencio: true }), INTERVALO_ACTUALIZACION_MS);
+    return () => clearInterval(intervalo);
   }, [cargar]);
 
   const casosActivos = datos?.casos.filter((c) => c.estado !== 'resuelto') ?? [];
@@ -201,7 +235,18 @@ export function PanoramaPage() {
                       El Centinela revisa tu huella todos los días. Si aparece algo raro, abrimos el caso
                       solos y te escribimos.
                     </p>
-                    <VigilanciaActiva />
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                      <VigilanciaActiva />
+                      {ultimaActualizacion && (
+                        <span
+                          className="texto-secundario mono"
+                          style={{ fontSize: '0.68rem', display: 'flex', alignItems: 'center', gap: 4 }}
+                        >
+                          <RadioTower size={11} aria-hidden="true" />
+                          <TiempoDesde fecha={ultimaActualizacion} />
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </section>
               </div>
@@ -211,6 +256,20 @@ export function PanoramaPage() {
       </div>
     </div>
   );
+}
+
+/** "actualizado hace Xs": prueba visible de que el panorama se refresca solo, sin recargar la página. */
+function TiempoDesde({ fecha }) {
+  const [, forzarTic] = useState(0);
+
+  useEffect(() => {
+    const tic = setInterval(() => forzarTic((n) => n + 1), 1000);
+    return () => clearInterval(tic);
+  }, []);
+
+  const segundos = Math.max(0, Math.round((Date.now() - fecha.getTime()) / 1000));
+
+  return <span>actualizado hace {segundos}s</span>;
 }
 
 function TarjetaCaso({ caso }) {
