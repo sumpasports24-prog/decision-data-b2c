@@ -150,6 +150,15 @@ npm run build                     # falla si hay errores de compilación/import
 
 ## Recorrido de demostración (con los datos sembrados)
 
+> ⚠️ **Antes de presentar:** el contenedor `scheduler` corre `centinela:ejecutar` cada 5 minutos y
+> `casos:escalar-vencidos` cada hora de verdad (no es decoración). Si lo dejas corriendo un rato
+> antes de la demo, va a adelantarse solo a los pasos 3 y 5 de abajo. Justo antes de presentar:
+> ```bash
+> docker compose stop scheduler
+> docker compose exec app php artisan migrate:fresh --seed
+> ```
+> y corre esos dos comandos tú mismo, en el momento del guión, con `docker compose exec app`.
+
 1. **Login** con la cédula `1710034065`.
 2. **Panorama**: verás 3 casos (Cooperativa JEP en `notificado`, Produbanco en `en_gestion` con
    plazo ya vencido, Banco Guayaquil `resuelto`) y una consulta de Banco del Austro sin caso
