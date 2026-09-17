@@ -1,9 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, Building2, RadioTower } from 'lucide-react';
-import { apiFetch, SesionExpiradaError } from '../api/client';
-import { useAuth } from '../context/AuthContext';
-import { useToast } from '../context/ToastContext';
+import { usePanorama } from '../hooks/usePanorama';
 import { EstadoCarga } from '../components/EstadoCarga';
 import { EstadoVacio } from '../components/EstadoVacio';
 import { EstadoFalla } from '../components/EstadoFalla';
@@ -11,66 +9,10 @@ import { EstadoStepper } from '../components/EstadoStepper';
 import { Nav } from '../components/Nav';
 import { PuntajeGauge } from '../components/PuntajeGauge';
 import { VigilanciaActiva } from '../components/VigilanciaActiva';
-
-const ETIQUETAS_ESTADO = {
-  detectado: 'Detectado',
-  notificado: 'Notificado',
-  autorizado: 'Autorizado',
-  en_gestion: 'En gestión',
-  escalado: 'Escalado',
-  resuelto: 'Resuelto',
-};
-
-const INTERVALO_ACTUALIZACION_MS = 8000;
+import { diasRestantes } from '../utils/fechas';
 
 export function PanoramaPage() {
-  const [datos, setDatos] = useState(null);
-  const [error, setError] = useState(null);
-  const [cargando, setCargando] = useState(true);
-  const [ultimaActualizacion, setUltimaActualizacion] = useState(null);
-  const { sesionExpirada } = useAuth();
-  const { mostrarToast } = useToast();
-  const casosConocidos = useRef(null);
-
-  const cargar = useCallback(
-    async ({ enSilencio = false } = {}) => {
-      if (!enSilencio) setCargando(true);
-      setError(null);
-      try {
-        const respuesta = await apiFetch('/panorama');
-
-        if (casosConocidos.current) {
-          for (const caso of respuesta.casos) {
-            const estadoPrevio = casosConocidos.current.get(caso.id);
-            if (estadoPrevio === undefined) {
-              mostrarToast(`El Centinela detectó un caso nuevo: ${caso.consulta?.entidad_nombre}.`);
-            } else if (estadoPrevio !== caso.estado) {
-              mostrarToast(`${caso.consulta?.entidad_nombre} pasó a "${ETIQUETAS_ESTADO[caso.estado] ?? caso.estado}".`);
-            }
-          }
-        }
-        casosConocidos.current = new Map(respuesta.casos.map((c) => [c.id, c.estado]));
-
-        setDatos(respuesta);
-        setUltimaActualizacion(new Date());
-      } catch (err) {
-        if (err instanceof SesionExpiradaError) {
-          sesionExpirada();
-          return;
-        }
-        if (!enSilencio) setError(err);
-      } finally {
-        if (!enSilencio) setCargando(false);
-      }
-    },
-    [sesionExpirada, mostrarToast],
-  );
-
-  useEffect(() => {
-    cargar();
-    const intervalo = setInterval(() => cargar({ enSilencio: true }), INTERVALO_ACTUALIZACION_MS);
-    return () => clearInterval(intervalo);
-  }, [cargar]);
+  const { datos, error, cargando, ultimaActualizacion, recargar } = usePanorama();
 
   const casosActivos = datos?.casos.filter((c) => c.estado !== 'resuelto') ?? [];
   const casosResueltos = datos?.casos.filter((c) => c.estado === 'resuelto') ?? [];
@@ -80,7 +22,7 @@ export function PanoramaPage() {
       <Nav />
       <div className="contenedor-ancho">
         {cargando && <EstadoCarga lineas={4} />}
-        {!cargando && error && <EstadoFalla error={error} onReintentar={cargar} />}
+        {!cargando && error && <EstadoFalla error={error} onReintentar={recargar} />}
 
         {!cargando && !error && datos && (
           <div className="entrada" style={{ display: 'grid', gap: 24 }}>
@@ -299,9 +241,4 @@ function TarjetaCaso({ caso }) {
       </Link>
     </div>
   );
-}
-
-function diasRestantes(fechaIso) {
-  const dias = Math.ceil((new Date(fechaIso) - new Date()) / 86400000);
-  return Math.max(0, dias);
 }

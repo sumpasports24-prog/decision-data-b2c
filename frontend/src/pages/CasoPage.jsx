@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Building2, Calendar, FileText, ShieldCheck } from 'lucide-react';
-import { apiFetch, ApiError, SesionExpiradaError } from '../api/client';
-import { useAuth } from '../context/AuthContext';
-import { useToast } from '../context/ToastContext';
+import { ApiError } from '../api/client';
+import { useCaso } from '../hooks/useCaso';
 import { EstadoCarga } from '../components/EstadoCarga';
 import { EstadoFalla } from '../components/EstadoFalla';
 import { EstadoBadge } from '../components/EstadoBadge';
@@ -13,83 +12,8 @@ import { LineaTiempo } from '../components/LineaTiempo';
 
 export function CasoPage() {
   const { id } = useParams();
-  const [caso, setCaso] = useState(null);
-  const [error, setError] = useState(null);
-  const [cargando, setCargando] = useState(true);
-  const [firmando, setFirmando] = useState(false);
+  const { caso, error, cargando, firmando, revocando, recargar, firmar, revocar } = useCaso(id);
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
-  const [revocando, setRevocando] = useState(false);
-  const { sesionExpirada } = useAuth();
-  const { mostrarToast } = useToast();
-
-  const cargar = useCallback(
-    async ({ enSilencio = false } = {}) => {
-      if (!enSilencio) setCargando(true);
-      setError(null);
-      try {
-        const respuesta = await apiFetch(`/casos/${id}`);
-        setCaso((anterior) => {
-          if (enSilencio && anterior && anterior.estado !== respuesta.estado) {
-            if (respuesta.estado === 'en_gestion') {
-              mostrarToast('El Gestor terminó de redactar la oposición.');
-            } else if (respuesta.estado === 'escalado') {
-              mostrarToast('El plazo venció: el caso se escaló a la Superintendencia.');
-            }
-          }
-          return respuesta;
-        });
-      } catch (err) {
-        if (err instanceof SesionExpiradaError) {
-          sesionExpirada();
-          return;
-        }
-        if (!enSilencio) setError(err);
-      } finally {
-        if (!enSilencio) setCargando(false);
-      }
-    },
-    [id, sesionExpirada, mostrarToast],
-  );
-
-  useEffect(() => {
-    cargar();
-  }, [cargar]);
-
-  // Mientras el caso puede moverse solo (agente trabajando o plazo corriendo),
-  // se refresca en segundo plano para no depender de que el usuario recargue.
-  useEffect(() => {
-    if (!caso || caso.estado === 'resuelto') return undefined;
-
-    const intervalo = setInterval(() => cargar({ enSilencio: true }), 4000);
-    return () => clearInterval(intervalo);
-  }, [caso, cargar]);
-
-  async function firmar() {
-    setFirmando(true);
-    try {
-      await apiFetch(`/casos/${id}/consentimiento`, { method: 'POST' });
-      await cargar();
-      mostrarToast('Autorización firmada. Decision Data ya está gestionando tu caso.');
-    } catch (err) {
-      setError(err);
-    } finally {
-      setFirmando(false);
-    }
-  }
-
-  async function revocar(consentimientoId) {
-    setRevocando(true);
-    try {
-      await apiFetch(`/consentimientos/${consentimientoId}/revocar`, { method: 'POST' });
-      setMostrarConfirmacion(false);
-      await cargar();
-      mostrarToast('Autorización revocada.');
-    } catch (err) {
-      setError(err);
-    } finally {
-      setRevocando(false);
-    }
-  }
 
   if (cargando) {
     return (
@@ -114,7 +38,7 @@ export function CasoPage() {
       <div className="con-nav-inferior">
         <Nav />
         <div className="contenedor-ancho">
-          <EstadoFalla error={mensajeError ? { message: mensajeError } : error} onReintentar={mensajeError ? undefined : cargar} />
+          <EstadoFalla error={mensajeError ? { message: mensajeError } : error} onReintentar={mensajeError ? undefined : recargar} />
         </div>
       </div>
     );
@@ -276,7 +200,7 @@ export function CasoPage() {
           textoConfirmar={revocando ? 'Revocando…' : 'Sí, revocar'}
           peligro
           onCancelar={() => setMostrarConfirmacion(false)}
-          onConfirmar={() => revocar(consentimientoVigente.id)}
+          onConfirmar={() => revocar(consentimientoVigente.id).then(() => setMostrarConfirmacion(false))}
         />
       )}
     </div>

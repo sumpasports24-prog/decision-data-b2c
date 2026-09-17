@@ -1,7 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { apiFetch, SesionExpiradaError } from '../api/client';
-import { useAuth } from '../context/AuthContext';
+import { useCasos } from '../hooks/useCasos';
 import { EstadoCarga } from '../components/EstadoCarga';
 import { EstadoVacio } from '../components/EstadoVacio';
 import { EstadoFalla } from '../components/EstadoFalla';
@@ -9,30 +7,7 @@ import { EstadoStepper } from '../components/EstadoStepper';
 import { Nav } from '../components/Nav';
 
 export function CasosPage() {
-  const [casos, setCasos] = useState(null);
-  const [error, setError] = useState(null);
-  const [cargando, setCargando] = useState(true);
-  const { sesionExpirada } = useAuth();
-
-  const cargar = useCallback(async () => {
-    setCargando(true);
-    setError(null);
-    try {
-      setCasos(await apiFetch('/casos'));
-    } catch (err) {
-      if (err instanceof SesionExpiradaError) {
-        sesionExpirada();
-        return;
-      }
-      setError(err);
-    } finally {
-      setCargando(false);
-    }
-  }, [sesionExpirada]);
-
-  useEffect(() => {
-    cargar();
-  }, [cargar]);
+  const { casos, error, cargando, recargar } = useCasos();
 
   return (
     <div className="con-nav-inferior">
@@ -41,7 +16,7 @@ export function CasosPage() {
         <h1 style={{ fontSize: '1.4rem', marginBottom: 20 }}>Mis casos</h1>
 
         {cargando && <EstadoCarga lineas={4} />}
-        {!cargando && error && <EstadoFalla error={error} onReintentar={cargar} />}
+        {!cargando && error && <EstadoFalla error={error} onReintentar={recargar} />}
 
         {!cargando && !error && casos && (
           <div className="entrada-escalonada" style={{ display: 'grid', gap: 14 }}>

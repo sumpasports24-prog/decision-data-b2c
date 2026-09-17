@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { apiFetch, getToken, setToken as guardarToken } from '../api/client';
+import { iniciarSesion, cerrarSesion as cerrarSesionApi } from '../api/auth';
+import { getToken, setToken as guardarToken } from '../api/client';
 
 const AuthContext = createContext(null);
 
@@ -16,15 +17,14 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = useCallback(async (cedula) => {
-    const datos = await apiFetch('/auth/login', { method: 'POST', body: { cedula } });
-    guardarToken(datos.token);
-    sessionStorage.setItem('decision_data_persona', JSON.stringify(datos.persona));
-    setPersona(datos.persona);
-    return datos.persona;
+    const persona = await iniciarSesion(cedula);
+    sessionStorage.setItem('decision_data_persona', JSON.stringify(persona));
+    setPersona(persona);
+    return persona;
   }, []);
 
-  const logout = useCallback(() => {
-    guardarToken(null);
+  const logout = useCallback(async () => {
+    await cerrarSesionApi();
     sessionStorage.removeItem('decision_data_persona');
     setPersona(null);
   }, []);

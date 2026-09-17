@@ -112,6 +112,21 @@ Form Requests (`$this->user()->can(...)`), no desde código repetido en cada con
 | `Agentes\Centinela` | Detecta consultas no reconocidas sin caso, abre el caso, notifica (comando `centinela:ejecutar`) |
 | `Agentes\Gestor` | Redacta la oposición (vía `AgenteRedactorInterface`), la persiste, avanza el caso |
 
+### Capas del frontend
+
+Mismo principio que el backend: las páginas no llaman a `fetch` directamente.
+
+```
+pages/        → solo presentación: usan un hook y pintan el resultado
+hooks/        → un hook por pantalla (usePanorama, useCaso, useCasos, useHuella):
+                 estado, polling en vivo, acciones (firmar/revocar)
+api/<módulo>  → una función por endpoint (auth.js, panorama.js, casos.js,
+                 consentimientos.js), todas sobre el mismo cliente
+api/client.js → el único lugar que sabe hacer fetch, manejar el token y
+                 traducir errores HTTP a los tres estados de la interfaz
+utils/        → helpers puros sin estado (fechas, formateo de texto)
+```
+
 ### Stack
 
 | Capa | Elección |
@@ -235,6 +250,11 @@ npm run build                     # falla si hay errores de compilación/import
   `update`/`delete`).
 - CORS, rate limiting (`throttle:60,1`) en las rutas de agente, y validación de entradas en todos
   los formularios (incluida la cédula con dígito verificador real, no solo longitud).
+- `APP_KEY` viene fija en `.env.example` (no vacía): `app`, `worker` y `scheduler` son contenedores
+  separados que comparten la misma base, y `Persona::hashCedula()` usa esta key como sal del hash —
+  si cada contenedor generara la suya al arrancar, un hash calculado por uno no coincidiría con el
+  de otro. Como todos los datos son sintéticos, fijarla en el repo es un trade-off aceptado a
+  propósito; en producción real sería un secreto inyectado, nunca commiteado.
 
 ## Limitaciones conocidas y próximos pasos
 

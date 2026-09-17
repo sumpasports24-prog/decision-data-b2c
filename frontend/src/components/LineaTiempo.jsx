@@ -1,4 +1,5 @@
 import { Bell, CheckCircle2, FileText, MessageCircle, RadioTower, ShieldCheck, ShieldOff, Workflow } from 'lucide-react';
+import { conNegritas } from '../utils/texto.jsx';
 
 const ETIQUETAS = {
   caso_creado: 'El Centinela detectó esta consulta y abrió el caso',
@@ -17,11 +18,6 @@ const ICONOS = {
   consentimiento_revocado: ShieldOff,
   oposicion_generada: FileText,
 };
-
-/** Convierte el *énfasis* estilo WhatsApp (un asterisco) en <strong>. */
-function conNegritas(texto) {
-  return texto.split(/\*([^*]+)\*/g).map((parte, i) => (i % 2 === 1 ? <strong key={i}>{parte}</strong> : parte));
-}
 
 export function LineaTiempo({ eventos }) {
   return (

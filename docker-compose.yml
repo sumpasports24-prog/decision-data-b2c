@@ -1,6 +1,7 @@
 services:
   mysql:
     image: mysql:8.0
+    restart: unless-stopped
     environment:
       MYSQL_DATABASE: ${DB_DATABASE:-decision_data}
       MYSQL_USER: ${DB_USERNAME:-decision_data}
@@ -16,6 +17,7 @@ services:
 
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -30,8 +32,17 @@ services:
   # de .env.example (que ya trae los hosts correctos de esta red: mysql,
   # redis). Nos pasó una vez: quedó corriendo con sqlite y cola `database`
   # sin que ningún log lo dejara obvio.
+  #
+  # Solo "app" corre migrate/seed (entrypoint.sh). worker y scheduler usan
+  # entrypoint-worker.sh, que NO migra ni siembra: si los tres migraran en
+  # paralelo compiten por las mismas tablas — nos pasó, un migrate:fresh de
+  # un contenedor tumbó la tabla que el seeder de otro estaba leyendo a
+  # mitad de camino, y ese contenedor murió sin nadie que lo reinicie.
+  # `depends_on: app: condition: service_healthy` ya garantiza que app
+  # terminó de migrar antes de que worker/scheduler arranquen siquiera.
   app:
     build: ./backend
+    restart: unless-stopped
     ports:
       - "8000:8000"
     depends_on:
@@ -50,6 +61,8 @@ services:
 
   worker:
     build: ./backend
+    restart: unless-stopped
+    entrypoint: ["/entrypoint-worker.sh"]
     command: ["php", "artisan", "queue:work", "--tries=3", "--sleep=1"]
     depends_on:
       app:
@@ -57,6 +70,8 @@ services:
 
   scheduler:
     build: ./backend
+    restart: unless-stopped
+    entrypoint: ["/entrypoint-worker.sh"]
     command: ["php", "artisan", "schedule:work"]
     depends_on:
       app:
@@ -64,6 +79,7 @@ services:
 
   frontend:
     build: ./frontend
+    restart: unless-stopped
     env_file: ./frontend/.env
     ports:
       - "5173:5173"

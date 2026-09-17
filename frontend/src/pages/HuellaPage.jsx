@@ -1,38 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
 import { Building2 } from 'lucide-react';
-import { apiFetch, SesionExpiradaError } from '../api/client';
-import { useAuth } from '../context/AuthContext';
+import { useHuella } from '../hooks/useHuella';
 import { EstadoCarga } from '../components/EstadoCarga';
 import { EstadoVacio } from '../components/EstadoVacio';
 import { EstadoFalla } from '../components/EstadoFalla';
 import { Nav } from '../components/Nav';
 
 export function HuellaPage() {
-  const [huella, setHuella] = useState(null);
-  const [error, setError] = useState(null);
-  const [cargando, setCargando] = useState(true);
-  const { sesionExpirada } = useAuth();
-
-  const cargar = useCallback(async () => {
-    setCargando(true);
-    setError(null);
-    try {
-      const panorama = await apiFetch('/panorama');
-      setHuella(panorama.huella_de_consulta);
-    } catch (err) {
-      if (err instanceof SesionExpiradaError) {
-        sesionExpirada();
-        return;
-      }
-      setError(err);
-    } finally {
-      setCargando(false);
-    }
-  }, [sesionExpirada]);
-
-  useEffect(() => {
-    cargar();
-  }, [cargar]);
+  const { huella, error, cargando, recargar } = useHuella();
 
   return (
     <div className="con-nav-inferior">
@@ -44,7 +18,7 @@ export function HuellaPage() {
         </p>
 
         {cargando && <EstadoCarga lineas={5} />}
-        {!cargando && error && <EstadoFalla error={error} onReintentar={cargar} />}
+        {!cargando && error && <EstadoFalla error={error} onReintentar={recargar} />}
 
         {!cargando && !error && huella && (
           <>

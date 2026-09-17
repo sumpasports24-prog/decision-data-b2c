@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, FolderClock, LogOut, Radar as RadarIcon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { iniciales } from '../utils/texto.jsx';
 import logo from '../assets/marca/dd-lockup-white.png';
 
 const ENLACES = [
@@ -8,16 +9,6 @@ const ENLACES = [
   { a: '/casos', etiqueta: 'Mis casos', Icono: FolderClock },
   { a: '/huella', etiqueta: 'Huella', Icono: RadarIcon },
 ];
-
-function iniciales(nombre) {
-  return nombre
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((palabra) => palabra[0])
-    .join('')
-    .toUpperCase();
-}
 
 export function Nav() {
   const { persona, logout } = useAuth();

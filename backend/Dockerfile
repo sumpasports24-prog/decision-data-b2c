@@ -17,7 +17,8 @@ COPY --from=vendor /app/vendor ./vendor
 COPY . .
 
 COPY docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh \
+COPY docker/entrypoint-worker.sh /entrypoint-worker.sh
+RUN chmod +x /entrypoint.sh /entrypoint-worker.sh \
     && mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/framework/testing storage/logs bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 

@@ -133,6 +133,23 @@ Todos verificables en el historial de commits y en la propia base de código:
     píldoras no caben legibles en 390px. Se detectó con las capturas de Playwright en viewport móvil,
     no revisando el código. Corrección: en pantallas angostas colapsa a una sola etiqueta (el estado
     actual) más una barra de progreso "2/5", en vez de intentar comprimir el texto de las 5.
+14. **`worker` y `scheduler` se morían solos y no volvían.** Al reconstruir las imágenes tras el
+    refactor del backend, `docker compose ps` mostró `worker` y `scheduler` en `Exited (1)`. Sus
+    logs mostraban `SQLSTATE... Base table or view not found: personas` durante el seeder — los tres
+    contenedores (`app`, `worker`, `scheduler`) corrían el mismo `entrypoint.sh`, que migra y siembra
+    de forma independiente; si dos lo hacen casi al mismo tiempo, uno puede leer la tabla justo
+    cuando el otro la está recreando. Sin política de reinicio, el contenedor que perdía la carrera
+    quedaba muerto para siempre, sin que nada lo relevantara. De paso, cada contenedor generaba su
+    propia `APP_KEY` aleatoria al arrancar — un problema real aparte, porque `Persona::hashCedula()`
+    usa esa key como sal: con keys distintas por contenedor, un hash calculado por uno nunca
+    coincidiría con el de otro. Corrección: `worker` y `scheduler` usan un entrypoint separado
+    (`entrypoint-worker.sh`) que solo espera a la base y nunca migra ni siembra — confían en
+    `depends_on: app: condition: service_healthy`, que ya garantiza que `app` terminó de migrar
+    antes de que ellos arranquen; se fijó una `APP_KEY` real en `.env.example` para que los tres
+    contenedores compartan la misma; y se agregó `restart: unless-stopped` a todos los servicios
+    como red de seguridad. Verificado forzando la condición de carrera original (un
+    `migrate:fresh --seed` manual mientras `worker`/`scheduler` seguían corriendo) y confirmando que
+    ya no se caen.
 
 ## Pruebas y controles usados para verificar calidad y seguridad
 
