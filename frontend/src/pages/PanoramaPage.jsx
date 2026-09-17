@@ -72,15 +72,48 @@ export function PanoramaPage() {
                   <span className="texto-secundario">Tu puntaje</span>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
                     <span className="mono" style={{ fontSize: '2.6rem', fontWeight: 600, lineHeight: 1 }}>
-                      {datos.score}
+                      {datos.score.total}
                     </span>
                     <span className="texto-secundario">/ 1000</span>
                   </div>
-                  <PuntajeGauge valor={datos.score} />
+                  <PuntajeGauge valor={datos.score.total} />
                   <p className="texto-secundario" style={{ margin: 0, fontSize: '0.9rem', lineHeight: 1.6 }}>
                     Este puntaje es contexto de tus casos, no el producto en sí: lo que importa es lo
                     que Decision Data gestiona por ti.
                   </p>
+                  <details>
+                    <summary style={{ cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, color: 'var(--azul)' }}>
+                      ¿Por qué este número?
+                    </summary>
+                    <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
+                      {datos.score.factores.map((factor) => (
+                        <div key={factor.clave} style={{ display: 'grid', gap: 3 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: '0.85rem' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span
+                                aria-hidden="true"
+                                style={{
+                                  color:
+                                    factor.direccion === 'positivo'
+                                      ? 'var(--verde)'
+                                      : factor.direccion === 'negativo'
+                                        ? 'var(--rojo)'
+                                        : 'var(--texto-secundario)',
+                                }}
+                              >
+                                {factor.direccion === 'positivo' ? '▲' : factor.direccion === 'negativo' ? '▼' : '●'}
+                              </span>
+                              {factor.etiqueta}
+                            </span>
+                            <span className="texto-secundario mono">{Math.round(factor.peso * 100)}%</span>
+                          </div>
+                          <p className="texto-secundario" style={{ margin: 0, fontSize: '0.78rem', lineHeight: 1.5 }}>
+                            {factor.detalle}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
                 </section>
 
                 <section className="tarjeta" style={{ display: 'grid', gap: 14 }}>

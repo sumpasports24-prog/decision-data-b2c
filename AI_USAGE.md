@@ -158,11 +158,56 @@ Todos verificables en el historial de commits y en la propia base de código:
     falta porque los demás modelos (`Persona`→personas, `Consulta`→consultas, `Caso`→casos) sí
     coinciden por accidente con la pluralización naive en inglés.
 
+16. **Riesgo anticipado (no observado en producción, mitigado antes de que ocurriera): el prompt
+    del Gestor podía inventar hechos.** Al agregar el campo donde la persona describe qué recuerda
+    de la consulta ("contanos qué recordás de esa fecha") y pasarlo al prompt de `ClaudeRedactor`,
+    el riesgo evidente es que el modelo "complete" la historia con fechas, montos o lugares que la
+    persona nunca mencionó — un documento legal no puede llevar hechos inventados. Corrección
+    aplicada en el propio prompt (`ClaudeRedactor.php` y su espejo en `RedactorStub.php` para que la
+    demo sin API key muestre el mismo comportamiento): instrucción explícita de citar el texto de
+    la persona como declaración textual y de no agregar datos que no estén ahí o en el caso. No se
+    trata de un error detectado en runtime (no hubo llamadas reales a la API durante el desarrollo
+    de esta función), sino de una mitigación de diseño hecha antes de habilitarla.
+
+17. **El botón de autorización sonaba a que la persona estaba dando consentimiento para que le
+    consultaran el buró, cuando esa consulta ya había ocurrido — es justo lo que se está
+    disputando.** Detectado en una revisión de copy la última noche: el botón decía "Autorizar y
+    firmar" sin decir a quién se autoriza, y el texto de arriba arrancaba con un residuo de
+    desarrollo visible al usuario final ("v1: Autorizo a Decision Data…", donde "v1" es la versión
+    interna del texto legal, `config('casos.texto_consentimiento.version')`, filtrada por error a
+    la interfaz). Corrección en `CasoPage.jsx`: se quitó el "v1: " literal, el botón pasó a
+    "Autorizar a Decision Data" (deja explícito el sujeto de la autorización), y se agregó una
+    línea aclaratoria explícita distinguiendo "autorizar una consulta nueva" de "autorizar a
+    Decision Data a actuar sobre la consulta que ya existe".
+
+## Decisiones de producto evaluadas y descartadas la última noche
+
+Antes de cerrar, se discutieron con el asistente de IA dos ideas adicionales y se decidió no
+construirlas, con el argumento documentado acá para que quede explícito que la decisión fue
+deliberada y no una limitación de tiempo disfrazada:
+
+- **Agente Vocero (llamada de voz de seguimiento).** Ya estaba declarado como fase 2, sin
+  implementar, en el README y en la interfaz (ver tarjeta "Fase 2" en `CasoPage.jsx`). Se descartó
+  reforzarlo porque WhatsApp ya cubre el canal de notificación real y con constancia escrita —
+  agregar voz simulada a 12 horas del cierre sumaba superficie sin sumar evidencia.
+- **"Coach de salud financiera" con KPIs de score.** Se evaluó y se descartó por tres razones: (1)
+  es la misma idea descartada dos días antes por ser solo informativa — pantallas sin acción real
+  detrás; (2) coincide, función por función, con un producto que ya existe en el mercado ecuatoriano
+  (Buró de Crédito Ecuador); (3) el enunciado no exige una función de IA visible, solo declarar su
+  uso durante el desarrollo — no había ningún requisito que cubrir con eso. En su lugar se invirtió
+  el tiempo en profundizar la única función de IA que sí es real y propia del caso: el Gestor
+  redactando con el contexto de la persona (punto 16 arriba), y en un desglose de factores del score
+  (`PanoramaService::scoreDeContexto()`) para poder explicar el número en vez de solo mostrarlo —
+  relevante porque el planteamiento original en la entrevista de trabajo fue "mostrarle a la persona
+  su informe", y la conclusión a la que se llegó construyendo el producto fue que mostrar no basta si
+  no se explica: es la misma intuición, un paso más adelante.
+
 ## Pruebas y controles usados para verificar calidad y seguridad
 
-- 37 tests automatizados (`php artisan test`) cubriendo los 6 puntos mínimos que pedía el
-  enunciado, más el contrato completo de las 6 herramientas del agente y el flujo de
-  consentimiento vía HTTP.
+- 43 tests automatizados (`php artisan test`) cubriendo los 6 puntos mínimos que pedía el
+  enunciado, el contrato completo de las 6 herramientas del agente, el flujo de consentimiento vía
+  HTTP (incluido que el contexto que escribe la persona se persiste y se cita textualmente en el
+  documento generado, y que su ausencia no rompe nada), y el desglose de factores del score.
 - Verificación manual end-to-end con `curl` contra un servidor real (no solo tests unitarios):
   login → panorama → firmar consentimiento → cola → `en_gestion` con documento generado, y
   `centinela:ejecutar` / `casos:escalar-vencidos` corridos de verdad, no solo simulados en tests.

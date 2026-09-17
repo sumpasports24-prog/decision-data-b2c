@@ -18,6 +18,19 @@ class ClaudeRedactor implements AgenteRedactorInterface
     {
         $persona = $caso->persona;
         $consulta = $caso->consulta;
+        $contexto = $caso->consentimientos()
+            ->whereNotNull('firmado_en')->whereNull('revocado_en')
+            ->latest('firmado_en')->value('contexto');
+
+        $bloqueContexto = filled($contexto) ? <<<CONTEXTO
+
+
+        El titular agregó, de su puño y letra al momento de autorizar, lo siguiente
+        sobre esta consulta: "{$contexto}". Incorpóralo como argumento de hecho en la
+        carta, citándolo como declaración del titular. No inventes ni agregues datos,
+        fechas, lugares o montos que el titular no haya mencionado explícitamente aquí
+        o en los datos del caso.
+        CONTEXTO : '';
 
         $prompt = <<<PROMPT
         Redacta, en español formal ecuatoriano, una carta de oposición al tratamiento
@@ -27,7 +40,7 @@ class ClaudeRedactor implements AgenteRedactorInterface
         {$consulta->consultada_en->format('d/m/Y')} por motivo "{$consulta->motivo}".
         Pide confirmar el origen, rectificar o eliminar el registro si no corresponde,
         y fijar un plazo de respuesta. Devuelve únicamente el texto del documento, sin
-        explicaciones adicionales.
+        explicaciones adicionales.{$bloqueContexto}
         PROMPT;
 
         $respuesta = Http::withHeaders([

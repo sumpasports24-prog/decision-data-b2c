@@ -60,10 +60,10 @@ export function useCaso(id) {
     return () => clearInterval(intervalo);
   }, [caso, cargar]);
 
-  async function firmar() {
+  async function firmar(contexto) {
     setFirmando(true);
     try {
-      await firmarConsentimiento(id);
+      await firmarConsentimiento(id, contexto);
       await cargar();
       mostrarToast('Autorización firmada. Decision Data ya está gestionando tu caso.');
     } catch (err) {

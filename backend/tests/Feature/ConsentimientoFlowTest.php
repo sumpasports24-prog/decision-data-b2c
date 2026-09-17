@@ -58,6 +58,39 @@ class ConsentimientoFlowTest extends TestCase
     // Qué hace el job cuando se procesa de verdad (Gestor::gestionar) ya está
     // cubierto por tests/Unit/Domain/Agentes/GestorTest.php.
 
+    public function test_firmar_consentimiento_guarda_el_contexto_que_escribe_la_persona(): void
+    {
+        Bus::fake();
+
+        $persona = Persona::factory()->create();
+        $caso = Caso::factory()->enEstado(CasoEstado::Notificado)->create(['persona_id' => $persona->id]);
+
+        $this->actingAs($persona, 'sanctum')
+            ->postJson("/api/casos/{$caso->id}/consentimiento", [
+                'contexto' => 'Yo nunca estuve en Cuenca, ni he pedido crédito en esa cooperativa.',
+            ])
+            ->assertStatus(201)
+            ->assertJsonPath('contexto', 'Yo nunca estuve en Cuenca, ni he pedido crédito en esa cooperativa.');
+
+        $this->assertDatabaseHas('consentimientos', [
+            'caso_id' => $caso->id,
+            'contexto' => 'Yo nunca estuve en Cuenca, ni he pedido crédito en esa cooperativa.',
+        ]);
+    }
+
+    public function test_firmar_consentimiento_sin_contexto_no_falla(): void
+    {
+        Bus::fake();
+
+        $persona = Persona::factory()->create();
+        $caso = Caso::factory()->enEstado(CasoEstado::Notificado)->create(['persona_id' => $persona->id]);
+
+        $this->actingAs($persona, 'sanctum')
+            ->postJson("/api/casos/{$caso->id}/consentimiento")
+            ->assertStatus(201)
+            ->assertJsonPath('contexto', null);
+    }
+
     public function test_una_persona_no_puede_leer_el_caso_de_otra(): void
     {
         $intruso = Persona::factory()->create();

@@ -14,6 +14,7 @@ export function CasoPage() {
   const { id } = useParams();
   const { caso, error, cargando, firmando, revocando, recargar, firmar, revocar } = useCaso(id);
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
+  const [contexto, setContexto] = useState('');
 
   if (cargando) {
     return (
@@ -84,14 +85,43 @@ export function CasoPage() {
                 <section className="tarjeta" style={{ borderColor: 'var(--ambar)', display: 'grid', gap: 12 }}>
                   <strong>Esta consulta no la reconociste. ¿Autorizas a Decision Data a gestionarla por ti?</strong>
                   <p className="texto-secundario" style={{ margin: 0, fontSize: '0.9rem' }}>
-                    {'v1: '}
                     Autorizo a Decision Data a presentar, en mi nombre, una oposición al tratamiento de
                     datos personales (LOPDP) ante la entidad reportante de este caso, y a dar seguimiento
                     al trámite hasta su resolución o escalamiento.
                   </p>
-                  {error && <EstadoFalla error={error} onReintentar={firmar} />}
-                  <button type="button" className="boton boton--primario" onClick={firmar} disabled={firmando}>
-                    {firmando ? 'Firmando…' : 'Autorizar y firmar'}
+                  <p className="texto-secundario" style={{ margin: 0, fontSize: '0.78rem', lineHeight: 1.5 }}>
+                    Esto no autoriza una nueva consulta a tu historial — esa ya se hizo y es justamente lo
+                    que estás disputando. Autorizás a Decision Data a actuar en tu nombre frente a la
+                    entidad, no a la entidad a consultarte de nuevo.
+                  </p>
+                  <label style={{ display: 'grid', gap: 6 }}>
+                    <span className="texto-secundario" style={{ fontSize: '0.85rem' }}>
+                      Contanos qué recordás de esa fecha (opcional)
+                    </span>
+                    <textarea
+                      value={contexto}
+                      onChange={(e) => setContexto(e.target.value)}
+                      maxLength={2000}
+                      rows={3}
+                      placeholder="Ej: no estuve en esa ciudad, no solicité ningún crédito con esa entidad…"
+                      style={{
+                        resize: 'vertical',
+                        fontFamily: 'inherit',
+                        fontSize: '0.9rem',
+                        padding: '10px 12px',
+                        borderRadius: 'var(--radio-sm)',
+                        border: '1px solid var(--borde)',
+                        background: 'var(--superficie-2)',
+                        color: 'var(--texto)',
+                      }}
+                    />
+                    <span className="texto-secundario" style={{ fontSize: '0.78rem' }}>
+                      Si lo escribís, el Gestor lo cita como argumento de hecho en el documento de oposición.
+                    </span>
+                  </label>
+                  {error && <EstadoFalla error={error} onReintentar={() => firmar(contexto)} />}
+                  <button type="button" className="boton boton--primario" onClick={() => firmar(contexto)} disabled={firmando}>
+                    {firmando ? 'Firmando…' : 'Autorizar a Decision Data'}
                   </button>
                 </section>
               )}

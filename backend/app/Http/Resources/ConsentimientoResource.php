@@ -14,6 +14,7 @@ class ConsentimientoResource extends JsonResource
             'caso_id' => $this->caso_id,
             'alcance' => $this->alcance,
             'texto_version' => $this->texto_version,
+            'contexto' => $this->contexto,
             'firmado_en' => $this->firmado_en,
             'revocado_en' => $this->revocado_en,
             'canal' => $this->canal,

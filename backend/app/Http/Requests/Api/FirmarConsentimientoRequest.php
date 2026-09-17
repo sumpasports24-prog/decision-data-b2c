@@ -13,6 +13,8 @@ class FirmarConsentimientoRequest extends FormRequest
 
     public function rules(): array
     {
-        return [];
+        return [
+            'contexto' => ['nullable', 'string', 'max:2000'],
+        ];
     }
 }

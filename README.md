@@ -112,6 +112,22 @@ Form Requests (`$this->user()->can(...)`), no desde código repetido en cada con
 | `Agentes\Centinela` | Detecta consultas no reconocidas sin caso, abre el caso, notifica (comando `centinela:ejecutar`) |
 | `Agentes\Gestor` | Redacta la oposición (vía `AgenteRedactorInterface`), la persiste, avanza el caso |
 
+### La IA visible del producto: el Gestor con contexto de la persona
+
+La única función de IA que se presenta como funcional (no simulada) es la redacción de la
+oposición. Al firmar, la persona puede agregar un texto libre ("contanos qué recordás de esa
+fecha") que se guarda en `consentimientos.contexto` y entra directo al prompt de
+`ClaudeRedactor`/`RedactorStub`: el documento generado cita ese texto como argumento de hecho, en
+vez de repetir solo los datos que ya traía el caso. El prompt incluye una guarda explícita contra
+inventar fechas, montos o lugares que la persona no haya dicho (ver punto 16 de `AI_USAGE.md`). Es
+demostrable en vivo: el mismo tipo de caso, firmado con y sin ese campo, produce dos documentos
+distintos.
+
+Por la misma razón (explicar en vez de solo mostrar) `PanoramaService::scoreDeContexto()` no
+devuelve un número suelto: devuelve el total más un desglose de 5 factores con peso y dirección,
+leyendo señales reales de la persona (consultas sin reconocer, antigüedad verificada) — la
+respuesta a "¿por qué no aplico?" que la entidad nunca da.
+
 ### Modelo de datos: `entidades` normalizada
 
 El diagrama del [brief](docs/BRIEF-decision-data.md) (documento de planificación, anterior al
@@ -220,10 +236,12 @@ cd backend
 php artisan test
 ```
 
-37 tests, todos sobre el motor de casos y su superficie HTTP: transiciones inválidas, agente sin
+43 tests, todos sobre el motor de casos y su superficie HTTP: transiciones inválidas, agente sin
 consentimiento vigente, cálculo de días hábiles y vencimiento, escalamiento automático, bitácora
-inmutable, validación de cédula ecuatoriana (dígito verificador módulo 10, no solo formato), y el
-contrato completo de las 6 herramientas del agente con tokens de alcance y expiración.
+inmutable, validación de cédula ecuatoriana (dígito verificador módulo 10, no solo formato), el
+contrato completo de las 6 herramientas del agente con tokens de alcance y expiración, que el
+contexto que escribe la persona se cita en el documento generado, y el desglose de factores del
+score.
 
 ```bash
 cd frontend
@@ -250,9 +268,12 @@ npm run build                     # falla si hay errores de compilación/import
    php artisan centinela:ejecutar
    ```
    Refresca Panorama: aparece un cuarto caso para Banco del Austro en estado `notificado`.
-4. **Autorizar**: entra al caso de Cooperativa JEP y firma. El estado pasa a `autorizado` de
-   inmediato; unos segundos después (cuando el `worker` procesa `GestionarCasoJob`) pasa solo a
-   `en_gestion` y aparece el documento de oposición generado.
+4. **Autorizar con contexto**: entra al caso de Cooperativa JEP, escribe algo en "contanos qué
+   recordás de esa fecha" (ej. *"yo nunca estuve en Cuenca, ni he pedido crédito en esa
+   cooperativa"*) y firma. El estado pasa a `autorizado` de inmediato; unos segundos después (cuando
+   el `worker` procesa `GestionarCasoJob`) pasa solo a `en_gestion` y el documento generado cita ese
+   texto textualmente. Para la comparación en vivo: repetir el mismo flujo con otro caso dejando el
+   campo vacío y mostrar que el documento no lo menciona.
 5. **Escalamiento en vivo**: el caso de Produbanco ya tiene `vence_en` en el pasado.
    ```bash
    php artisan casos:escalar-vencidos
@@ -303,8 +324,15 @@ npm run build                     # falla si hay errores de compilación/import
   entorno.
 - El logo (`frontend/src/assets/marca/dd-lockup-white.png`) se descargó directamente de
   `decisiondata.ec` y se usa sin modificar, tal como pide el enunciado.
-- Sin tests end-to-end de frontend (Playwright/Cypress) por tiempo; sí hay 37 tests de backend
+- Sin tests end-to-end de frontend (Playwright/Cypress) por tiempo; sí hay 43 tests de backend
   sobre el motor, que es donde está el riesgo real.
+- **Descartado a propósito, no por falta de tiempo:** un "coach" de salud financiera con KPIs de
+  score (metas, tendencias, consejos genéricos). Se evaluó y no se construyó porque es la misma
+  idea informativa descartada en una iteración anterior, y porque coincide función por función con
+  un producto que ya existe en el mercado ecuatoriano. Lo que sí se construyó en su lugar —
+  desglose explicable del score y contexto de la persona en la oposición generada por IA — ataca la
+  misma raíz (la persona no ve por qué se decidió algo sobre ella) sin duplicar un producto
+  existente. Ver `AI_USAGE.md`.
 - Para producción: mover `NOTIFICATION_DRIVER` a `whatsapp` con plantilla aprobada por Meta,
   agregar un usuario de base de datos sin permisos de `UPDATE`/`DELETE` sobre `eventos` y
   `documentos` (hoy la inmutabilidad se aplica solo a nivel de aplicación), y mover el cálculo de

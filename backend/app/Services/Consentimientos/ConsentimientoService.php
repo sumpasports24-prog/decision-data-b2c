@@ -20,7 +20,7 @@ class ConsentimientoService
 {
     public function __construct(private readonly CaseStateMachine $motor) {}
 
-    public function firmar(Caso $caso): Consentimiento
+    public function firmar(Caso $caso, ?string $contexto = null): Consentimiento
     {
         if ($caso->estado !== CasoEstado::Notificado) {
             throw new CasoNoEsperaAutorizacionException;
@@ -33,6 +33,7 @@ class ConsentimientoService
             'caso_id' => $caso->id,
             'alcance' => $alcance,
             'texto_version' => $textoConfig['version'].': '.$textoConfig['texto'],
+            'contexto' => $contexto,
             'firmado_en' => now(),
             'canal' => 'web',
         ]);

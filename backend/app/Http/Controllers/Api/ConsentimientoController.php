@@ -23,7 +23,7 @@ class ConsentimientoController extends Controller
     public function firmar(FirmarConsentimientoRequest $request, Caso $caso)
     {
         try {
-            $consentimiento = $this->consentimientos->firmar($caso);
+            $consentimiento = $this->consentimientos->firmar($caso, $request->validated('contexto'));
         } catch (CasoNoEsperaAutorizacionException $e) {
             return response()->json(['message' => $e->getMessage()], 409);
         } catch (TransicionInvalidaException $e) {

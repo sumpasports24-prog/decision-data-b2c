@@ -14,6 +14,7 @@ class Consentimiento extends Model
         'caso_id',
         'alcance',
         'texto_version',
+        'contexto',
         'firmado_en',
         'revocado_en',
         'canal',
