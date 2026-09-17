@@ -179,6 +179,16 @@ Todos verificables en el historial de commits y en la propia base de código:
     "Autorizar a Decision Data" (deja explícito el sujeto de la autorización), y se agregó una
     línea aclaratoria explícita distinguiendo "autorizar una consulta nueva" de "autorizar a
     Decision Data a actuar sobre la consulta que ya existe".
+18. **El frontend mostraba "En disputa" para una consulta que nadie había revisado todavía.**
+    Surgió al responder una pregunta sobre el flujo real: `consultas.reconocida` es un booleano
+    nullable de 3 estados (`null` = sin revisar, `true`/`false` = decisión de la persona), y el
+    Centinela ya distinguía bien los tres (`where('reconocida', false)`, nunca actúa sobre `null`).
+    Pero `PanoramaPage.jsx` y `HuellaPage.jsx` usaban `consulta.reconocida ? verde : ambar`, que
+    trata `null` igual que `false` — una consulta recién llegada, sin decisión de nadie, se veía
+    idéntica a una en disputa real. Con los datos sembrados no se notaba (el seeder solo usa `true`
+    o `false` explícitos, nunca `null`), así que no lo detectó ningún test ni verificación visual
+    anterior. Corrección: nuevo helper `frontend/src/utils/reconocimiento.js` con los 3 estados
+    explícitos ("Reconocida" / "Pendiente de revisión" / "En disputa"), usado en ambas pantallas.
 
 ## Decisiones de producto evaluadas y descartadas la última noche
 

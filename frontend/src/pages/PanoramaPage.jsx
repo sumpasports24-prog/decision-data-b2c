@@ -10,6 +10,7 @@ import { Nav } from '../components/Nav';
 import { PuntajeGauge } from '../components/PuntajeGauge';
 import { VigilanciaActiva } from '../components/VigilanciaActiva';
 import { diasRestantes } from '../utils/fechas';
+import { estadoReconocimiento } from '../utils/reconocimiento';
 
 export function PanoramaPage() {
   const { datos, error, cargando, ultimaActualizacion, recargar } = usePanorama();
@@ -134,11 +135,11 @@ export function PanoramaPage() {
                           style={{
                             fontSize: '0.72rem',
                             fontWeight: 600,
-                            color: consulta.reconocida ? 'var(--verde)' : 'var(--ambar)',
+                            color: estadoReconocimiento(consulta.reconocida).color,
                             whiteSpace: 'nowrap',
                           }}
                         >
-                          {consulta.reconocida ? 'Reconocida' : 'En disputa'}
+                          {estadoReconocimiento(consulta.reconocida).etiqueta}
                         </span>
                       </div>
                     ))}

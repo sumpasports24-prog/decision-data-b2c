@@ -306,7 +306,11 @@ npm run build                     # falla si hay errores de compilación/import
 - **`consultas.reconocida` no tiene todavía una pantalla donde la persona lo decida ella misma.**
   Es el campo que dispara todo el producto, y quien debe decidirlo es la persona (no el banco, ni
   un documento que Decision Data no puede auditar: no tiene acceso a los papeles internos de la
-  entidad). Hoy ese valor solo lo pone el seeder de demo; en producción, `HuellaPage.jsx` tendría un
+  entidad). Es un booleano **nullable de 3 estados**, a propósito: `null` = nadie la revisó todavía
+  (así nace toda consulta nueva), `true` = la persona la reconoce, `false` = la persona confirmó que
+  no — y el Centinela (`where('reconocida', false)`) solo actúa sobre ese tercer estado explícito,
+  nunca sobre `null`. Así una consulta recién llegada no dispara ni alerta ni caso hasta que alguien
+  diga algo. Hoy ese valor solo lo pone el seeder de demo; en producción, `HuellaPage.jsx` tendría un
   control "¿reconocés esta consulta?" por cada fila, y esa respuesta —no un webhook del banco— es la
   que alimentaría al Centinela. Es la pieza que falta para que el flujo sea autosuficiente de punta
   a punta, no solo demostrable con datos sembrados.

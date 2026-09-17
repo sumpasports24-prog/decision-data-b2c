@@ -1,5 +1,6 @@
 import { Building2 } from 'lucide-react';
 import { useHuella } from '../hooks/useHuella';
+import { estadoReconocimiento } from '../utils/reconocimiento';
 import { EstadoCarga } from '../components/EstadoCarga';
 import { EstadoVacio } from '../components/EstadoVacio';
 import { EstadoFalla } from '../components/EstadoFalla';
@@ -56,11 +57,11 @@ export function HuellaPage() {
                         style={{
                           fontSize: '0.72rem',
                           fontWeight: 600,
-                          color: consulta.reconocida ? 'var(--verde)' : 'var(--ambar)',
+                          color: estadoReconocimiento(consulta.reconocida).color,
                           marginTop: 2,
                         }}
                       >
-                        {consulta.reconocida ? 'Reconocida' : 'En disputa'}
+                        {estadoReconocimiento(consulta.reconocida).etiqueta}
                       </div>
                     </div>
                   </div>
