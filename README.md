@@ -112,6 +112,30 @@ Form Requests (`$this->user()->can(...)`), no desde código repetido en cada con
 | `Agentes\Centinela` | Detecta consultas no reconocidas sin caso, abre el caso, notifica (comando `centinela:ejecutar`) |
 | `Agentes\Gestor` | Redacta la oposición (vía `AgenteRedactorInterface`), la persiste, avanza el caso |
 
+### Modelo de datos: `entidades` normalizada
+
+El diagrama del [brief](docs/BRIEF-decision-data.md) (documento de planificación, anterior al
+desarrollo) muestra `consultas.entidad_nombre` como texto libre. En la implementación final se
+extrajo a su propia tabla:
+
+```
+entidades              consultas
+────────               ─────────
+id                     id
+nombre (único)         persona_id  ──► personas.id
+tipo                   entidad_id  ──► entidades.id
+email_contacto         motivo
+                       consultada_en
+                       reconocida
+```
+
+Evita repetir el nombre de cada banco/cooperativa en cada fila, da un lugar natural para datos que
+un caso real necesitaría de la entidad (a quién dirigir la oposición, con qué correo) y protege la
+integridad referencial (`restrictOnDelete`: no se puede borrar una entidad con consultas asociadas).
+El resto del dominio (`Centinela`, `Gestor`, los redactores, los tests) sigue leyendo
+`$consulta->entidad_nombre` sin cambios — es un accessor en el modelo `Consulta` que resuelve
+`$this->entidad->nombre`, así que el cambio de esquema no se filtró a docenas de archivos.
+
 ### Capas del frontend
 
 Mismo principio que el backend: las páginas no llaman a `fetch` directamente.

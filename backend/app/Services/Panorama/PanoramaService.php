@@ -14,12 +14,12 @@ class PanoramaService
 {
     public function resumenPara(Persona $persona): array
     {
-        $casos = $persona->casos()->with('consulta')->orderByDesc('abierto_en')->get();
+        $casos = $persona->casos()->with('consulta.entidad')->orderByDesc('abierto_en')->get();
 
         return [
             'persona' => $persona,
             'score' => $this->scoreDeContexto($persona),
-            'huella_de_consulta' => $persona->consultas()->orderByDesc('consultada_en')->get(),
+            'huella_de_consulta' => $persona->consultas()->with('entidad')->orderByDesc('consultada_en')->get(),
             'casos' => $casos,
             'alertas' => $casos->where('estado', CasoEstado::Notificado)->values(),
         ];

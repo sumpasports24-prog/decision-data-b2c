@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,7 +14,7 @@ class Consulta extends Model
 
     protected $fillable = [
         'persona_id',
-        'entidad_nombre',
+        'entidad_id',
         'motivo',
         'consultada_en',
         'reconocida',
@@ -29,8 +30,25 @@ class Consulta extends Model
         return $this->belongsTo(Persona::class);
     }
 
+    public function entidad(): BelongsTo
+    {
+        return $this->belongsTo(Entidad::class);
+    }
+
     public function caso(): HasOne
     {
         return $this->hasOne(Caso::class);
+    }
+
+    /**
+     * Compatibilidad hacia el resto del dominio (Centinela, Gestor,
+     * redactores, tests): todos leen `$consulta->entidad_nombre` como si
+     * fuera una columna propia. Internamente ya no lo es — vive en
+     * `entidades.nombre` — pero cambiar cada punto de lectura no aporta
+     * nada; el accessor es el lugar correcto para absorber ese cambio.
+     */
+    protected function entidadNombre(): Attribute
+    {
+        return Attribute::get(fn () => $this->entidad?->nombre);
     }
 }

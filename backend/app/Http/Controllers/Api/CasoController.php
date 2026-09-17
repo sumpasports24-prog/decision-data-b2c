@@ -13,14 +13,14 @@ class CasoController extends Controller
 {
     public function index(Request $request)
     {
-        $casos = $request->user()->casos()->with('consulta')->orderByDesc('abierto_en')->get();
+        $casos = $request->user()->casos()->with('consulta.entidad')->orderByDesc('abierto_en')->get();
 
         return CasoResumenResource::collection($casos);
     }
 
     public function show(VerCasoRequest $request, Caso $caso)
     {
-        $caso->load(['consulta', 'eventos', 'documentos', 'consentimientos']);
+        $caso->load(['consulta.entidad', 'eventos', 'documentos', 'consentimientos']);
 
         return new CasoResource($caso);
     }

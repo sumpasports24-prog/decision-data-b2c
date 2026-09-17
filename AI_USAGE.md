@@ -150,6 +150,13 @@ Todos verificables en el historial de commits y en la propia base de código:
     como red de seguridad. Verificado forzando la condición de carrera original (un
     `migrate:fresh --seed` manual mientras `worker`/`scheduler` seguían corriendo) y confirmando que
     ya no se caen.
+15. **El modelo `Entidad` apuntaba a una tabla que no existía.** Al normalizar
+    `consultas.entidad_nombre` en su propia tabla `entidades`, los tests fallaron con
+    `no such table: entidads`. Eloquent pluraliza nombres de modelo al inglés por defecto
+    ("Entidad" → "entidads"), y la migración sí creaba "entidades" (español). Corrección:
+    `protected $table = 'entidades';` explícito en el modelo — algo que hasta ahora no había hecho
+    falta porque los demás modelos (`Persona`→personas, `Consulta`→consultas, `Caso`→casos) sí
+    coinciden por accidente con la pluralización naive en inglés.
 
 ## Pruebas y controles usados para verificar calidad y seguridad
 

@@ -8,6 +8,7 @@ use App\Domain\Casos\CaseStateMachine;
 use App\Domain\Casos\CasoEstado;
 use App\Models\Consentimiento;
 use App\Models\Consulta;
+use App\Models\Entidad;
 use App\Models\Persona;
 use Illuminate\Database\Seeder;
 
@@ -31,6 +32,12 @@ class EscenarioDemoSeeder extends Seeder
 
         $motor = app(CaseStateMachine::class);
 
+        $bancoPichincha = Entidad::create(['nombre' => 'Banco Pichincha']);
+        $jep = Entidad::create(['nombre' => 'Cooperativa JEP']);
+        $produbanco = Entidad::create(['nombre' => 'Produbanco']);
+        $bancoGuayaquil = Entidad::create(['nombre' => 'Banco Guayaquil']);
+        $bancoAustro = Entidad::create(['nombre' => 'Banco del Austro']);
+
         // --- Persona principal de la demo -------------------------------
         $ana = Persona::create([
             'cedula_hash' => Persona::hashCedula('1710034065'),
@@ -42,7 +49,7 @@ class EscenarioDemoSeeder extends Seeder
         // Consulta reconocida: aparece en la huella, no genera caso.
         Consulta::create([
             'persona_id' => $ana->id,
-            'entidad_nombre' => 'Banco Pichincha',
+            'entidad_id' => $bancoPichincha->id,
             'motivo' => 'Solicitud de crédito de consumo',
             'consultada_en' => now()->subDays(10),
             'reconocida' => true,
@@ -51,7 +58,7 @@ class EscenarioDemoSeeder extends Seeder
         // Consulta no reconocida que ya avanzó hasta "notificado": para firmar en vivo desde el frontend.
         $consultaJep = Consulta::create([
             'persona_id' => $ana->id,
-            'entidad_nombre' => 'Cooperativa JEP',
+            'entidad_id' => $jep->id,
             'motivo' => 'Renovación de tarjeta de crédito',
             'consultada_en' => now()->subDays(3),
             'reconocida' => false,
@@ -60,7 +67,7 @@ class EscenarioDemoSeeder extends Seeder
         // Consulta que ya se gestionó por completo hasta "en_gestion", con plazo vencido: para escalar en vivo.
         $consultaProdu = Consulta::create([
             'persona_id' => $ana->id,
-            'entidad_nombre' => 'Produbanco',
+            'entidad_id' => $produbanco->id,
             'motivo' => 'Apertura de cuenta corriente',
             'consultada_en' => now()->subDays(25),
             'reconocida' => false,
@@ -69,7 +76,7 @@ class EscenarioDemoSeeder extends Seeder
         // Consulta que llega hasta "resuelto": para mostrar el ciclo completo cerrado.
         $consultaGuayaquil = Consulta::create([
             'persona_id' => $ana->id,
-            'entidad_nombre' => 'Banco Guayaquil',
+            'entidad_id' => $bancoGuayaquil->id,
             'motivo' => 'Consulta de tarjeta de crédito adicional',
             'consultada_en' => now()->subDays(40),
             'reconocida' => false,
@@ -83,7 +90,7 @@ class EscenarioDemoSeeder extends Seeder
         // corriendo `php artisan centinela:ejecutar`.
         Consulta::create([
             'persona_id' => $ana->id,
-            'entidad_nombre' => 'Banco del Austro',
+            'entidad_id' => $bancoAustro->id,
             'motivo' => 'Consulta de score crediticio',
             'consultada_en' => now()->subHours(6),
             'reconocida' => false,
@@ -112,7 +119,7 @@ class EscenarioDemoSeeder extends Seeder
             'telefono_e164' => '+593991112233',
             'identidad_verificada_en' => now()->subDays(15),
         ])->consultas()->create([
-            'entidad_nombre' => 'Banco Guayaquil',
+            'entidad_id' => $bancoGuayaquil->id,
             'motivo' => 'Renovación de tarjeta de débito',
             'consultada_en' => now()->subDays(5),
             'reconocida' => true,
@@ -124,7 +131,7 @@ class EscenarioDemoSeeder extends Seeder
             'telefono_e164' => '+593998887766',
             'identidad_verificada_en' => now()->subDays(2),
         ])->consultas()->create([
-            'entidad_nombre' => 'Cooperativa JEP',
+            'entidad_id' => $jep->id,
             'motivo' => 'Solicitud de microcrédito',
             'consultada_en' => now()->subDays(1),
             'reconocida' => true,

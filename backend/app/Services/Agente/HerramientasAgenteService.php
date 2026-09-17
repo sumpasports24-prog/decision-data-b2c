@@ -28,7 +28,7 @@ class HerramientasAgenteService
 
     public function obtenerCaso(Caso $caso): Caso
     {
-        return $caso->load(['persona', 'consulta', 'eventos', 'documentos', 'consentimientos']);
+        return $caso->load(['persona', 'consulta.entidad', 'eventos', 'documentos', 'consentimientos']);
     }
 
     /**

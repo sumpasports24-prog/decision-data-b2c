@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('consultas', function (Blueprint $table) {
             $table->id();
             $table->foreignId('persona_id')->constrained('personas')->cascadeOnDelete();
-            $table->string('entidad_nombre');
+            $table->foreignId('entidad_id')->constrained('entidades')->restrictOnDelete();
             $table->string('motivo');
             $table->timestamp('consultada_en');
             $table->boolean('reconocida')->nullable();
