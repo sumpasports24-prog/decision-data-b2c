@@ -67,7 +67,7 @@ class PanoramaService
                     'peso' => 0.15,
                     'direccion' => $antiguedadMeses >= 12 ? 'positivo' : 'neutro',
                     'detalle' => $antiguedadMeses > 0
-                        ? "Identidad verificada hace {$antiguedadMeses} meses."
+                        ? "Identidad verificada hace {$antiguedadMeses} ".($antiguedadMeses === 1 ? 'mes.' : 'meses.')
                         : 'Identidad verificada recientemente.',
                 ],
                 [
