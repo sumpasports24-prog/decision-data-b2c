@@ -2,7 +2,9 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { LoginPage } from './pages/LoginPage';
 import { PanoramaPage } from './pages/PanoramaPage';
+import { CasosPage } from './pages/CasosPage';
 import { CasoPage } from './pages/CasoPage';
+import { HuellaPage } from './pages/HuellaPage';
 
 function RutaProtegida({ children }) {
   const { persona, cargandoSesion } = useAuth();
@@ -30,10 +32,26 @@ export default function App() {
         }
       />
       <Route
+        path="/casos"
+        element={
+          <RutaProtegida>
+            <CasosPage />
+          </RutaProtegida>
+        }
+      />
+      <Route
         path="/casos/:id"
         element={
           <RutaProtegida>
             <CasoPage />
+          </RutaProtegida>
+        }
+      />
+      <Route
+        path="/huella"
+        element={
+          <RutaProtegida>
+            <HuellaPage />
           </RutaProtegida>
         }
       />

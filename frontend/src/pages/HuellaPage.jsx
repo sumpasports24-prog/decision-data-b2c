@@ -1,0 +1,101 @@
+import { useCallback, useEffect, useState } from 'react';
+import { Building2 } from 'lucide-react';
+import { apiFetch, SesionExpiradaError } from '../api/client';
+import { useAuth } from '../context/AuthContext';
+import { EstadoCarga } from '../components/EstadoCarga';
+import { EstadoVacio } from '../components/EstadoVacio';
+import { EstadoFalla } from '../components/EstadoFalla';
+import { Nav } from '../components/Nav';
+
+export function HuellaPage() {
+  const [huella, setHuella] = useState(null);
+  const [error, setError] = useState(null);
+  const [cargando, setCargando] = useState(true);
+  const { sesionExpirada } = useAuth();
+
+  const cargar = useCallback(async () => {
+    setCargando(true);
+    setError(null);
+    try {
+      const panorama = await apiFetch('/panorama');
+      setHuella(panorama.huella_de_consulta);
+    } catch (err) {
+      if (err instanceof SesionExpiradaError) {
+        sesionExpirada();
+        return;
+      }
+      setError(err);
+    } finally {
+      setCargando(false);
+    }
+  }, [sesionExpirada]);
+
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
+
+  return (
+    <div className="con-nav-inferior">
+      <Nav />
+      <div className="contenedor-ancho">
+        <h1 style={{ fontSize: '1.4rem', marginBottom: 6 }}>Huella de consulta</h1>
+        <p className="texto-secundario" style={{ marginTop: 0, marginBottom: 20 }}>
+          Cada vez que alguien pide tu reporte queda registrado aquí.
+        </p>
+
+        {cargando && <EstadoCarga lineas={5} />}
+        {!cargando && error && <EstadoFalla error={error} onReintentar={cargar} />}
+
+        {!cargando && !error && huella && (
+          <>
+            {huella.length === 0 ? (
+              <EstadoVacio titulo="Sin consultas registradas" descripcion="Aquí aparecerá cada vez que alguien te consulte." />
+            ) : (
+              <div className="tarjeta entrada-escalonada" style={{ display: 'grid', gap: 2, padding: 6 }}>
+                {huella.map((consulta) => (
+                  <div
+                    key={consulta.id}
+                    className="tarjeta--interna"
+                    style={{
+                      background: 'transparent',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                      gap: 12,
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, minWidth: 0 }}>
+                      <Building2 size={16} color="var(--texto-secundario)" style={{ marginTop: 3, flex: 'none' }} aria-hidden="true" />
+                      <div>
+                        <strong>{consulta.entidad_nombre}</strong>
+                        <div className="texto-secundario" style={{ fontSize: '0.85rem' }}>
+                          {consulta.motivo}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right', flex: 'none' }}>
+                      <div className="texto-secundario mono" style={{ fontSize: '0.85rem' }}>
+                        {new Date(consulta.consultada_en).toLocaleDateString('es-EC')}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: '0.72rem',
+                          fontWeight: 600,
+                          color: consulta.reconocida ? 'var(--verde)' : 'var(--ambar)',
+                          marginTop: 2,
+                        }}
+                      >
+                        {consulta.reconocida ? 'Reconocida' : 'En disputa'}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
