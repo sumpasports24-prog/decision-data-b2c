@@ -303,6 +303,13 @@ npm run build                     # falla si hay errores de compilación/import
 
 ## Limitaciones conocidas y próximos pasos
 
+- **`consultas.reconocida` no tiene todavía una pantalla donde la persona lo decida ella misma.**
+  Es el campo que dispara todo el producto, y quien debe decidirlo es la persona (no el banco, ni
+  un documento que Decision Data no puede auditar: no tiene acceso a los papeles internos de la
+  entidad). Hoy ese valor solo lo pone el seeder de demo; en producción, `HuellaPage.jsx` tendría un
+  control "¿reconocés esta consulta?" por cada fila, y esa respuesta —no un webhook del banco— es la
+  que alimentaría al Centinela. Es la pieza que falta para que el flujo sea autosuficiente de punta
+  a punta, no solo demostrable con datos sembrados.
 - Solo se implementa un tipo de caso: consulta no reconocida → oposición LOPDP. Los demás quedan
   definidos en el modelo (`casos.tipo`) sin implementar.
 - El agente **Vocero** (llamadas telefónicas a la entidad) es **fase 2, no implementado**. Existe
