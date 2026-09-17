@@ -56,10 +56,13 @@ class EscenarioDemoSeeder extends Seeder
         ]);
 
         // Consulta no reconocida que ya avanzó hasta "notificado": para firmar en vivo desde el frontend.
+        // El motivo menciona Cuenca a propósito: es el mismo dato que el guion de demo usa como
+        // contexto al firmar ("nunca estuve en Cuenca"), para que el porqué de la disputa se lea
+        // solo, sin tener que explicarlo en voz alta.
         $consultaJep = Consulta::create([
             'persona_id' => $ana->id,
             'entidad_id' => $jep->id,
-            'motivo' => 'Renovación de tarjeta de crédito',
+            'motivo' => 'Solicitud de crédito de consumo — agencia Cuenca',
             'consultada_en' => now()->subDays(3),
             'reconocida' => false,
         ]);
@@ -68,7 +71,7 @@ class EscenarioDemoSeeder extends Seeder
         $consultaProdu = Consulta::create([
             'persona_id' => $ana->id,
             'entidad_id' => $produbanco->id,
-            'motivo' => 'Apertura de cuenta corriente',
+            'motivo' => 'Apertura de cuenta corriente — agencia Portoviejo',
             'consultada_en' => now()->subDays(25),
             'reconocida' => false,
         ]);
@@ -77,7 +80,7 @@ class EscenarioDemoSeeder extends Seeder
         $consultaGuayaquil = Consulta::create([
             'persona_id' => $ana->id,
             'entidad_id' => $bancoGuayaquil->id,
-            'motivo' => 'Consulta de tarjeta de crédito adicional',
+            'motivo' => 'Tarjeta de crédito adicional a nombre de un tercero',
             'consultada_en' => now()->subDays(40),
             'reconocida' => false,
         ]);
@@ -91,7 +94,7 @@ class EscenarioDemoSeeder extends Seeder
         Consulta::create([
             'persona_id' => $ana->id,
             'entidad_id' => $bancoAustro->id,
-            'motivo' => 'Consulta de score crediticio',
+            'motivo' => 'Consulta de score crediticio por canal digital no registrado a su nombre',
             'consultada_en' => now()->subHours(6),
             'reconocida' => false,
         ]);
