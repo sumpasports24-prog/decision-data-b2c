@@ -11,6 +11,14 @@ Prueba técnica final — proceso de selección de desarrolladores 2026 (Decisio
 Ver el brief completo de producto y arquitectura en [`docs/BRIEF-decision-data.md`](docs/BRIEF-decision-data.md)
 (documento de trabajo interno, no forma parte del enunciado original de Decision Data).
 
+## Flujo de ramas
+
+| Rama | Para qué |
+|---|---|
+| `adrian` | Desarrollo día a día. Todo commit nuevo nace aquí. |
+| `developer` | Integración: recibe merges de `adrian` para verificar que todo corre junto (tests, build, Docker) antes de tocar producción. |
+| `produccion` | **Rama principal.** Solo lo ya verificado en `developer`. Es la que se etiqueta con el tag de entrega y la que se reporta como "rama principal" en el correo final. |
+
 ## Recorrido implementado punta a punta
 
 **Consulta no reconocida → oposición LOPDP**, con una única regla que sostiene todo:
