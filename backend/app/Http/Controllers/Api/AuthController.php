@@ -3,24 +3,18 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Persona;
-use App\Rules\CedulaEcuatoriana;
+use App\Http\Requests\Api\LoginRequest;
+use App\Http\Resources\PersonaResource;
+use App\Services\Identidad\AutenticacionService;
 use Illuminate\Http\Request;
 
-/**
- * Verificación de identidad simulada sobre datos sintéticos: no hay
- * contraseña ni OTP real. Si la cédula tiene el formato válido y coincide
- * con una persona sembrada, se emite un token de sesión para el frontend.
- */
 class AuthController extends Controller
 {
-    public function login(Request $request)
-    {
-        $datos = $request->validate([
-            'cedula' => ['required', 'string', new CedulaEcuatoriana],
-        ]);
+    public function __construct(private readonly AutenticacionService $autenticacion) {}
 
-        $persona = Persona::where('cedula_hash', Persona::hashCedula($datos['cedula']))->first();
+    public function login(LoginRequest $request)
+    {
+        $persona = $this->autenticacion->buscarPorCedula($request->validated('cedula'));
 
         if (! $persona) {
             return response()->json([
@@ -29,17 +23,14 @@ class AuthController extends Controller
         }
 
         return response()->json([
-            'token' => $persona->createToken('frontend')->plainTextToken,
-            'persona' => [
-                'id' => $persona->id,
-                'nombre' => $persona->nombre,
-            ],
+            'token' => $this->autenticacion->emitirToken($persona),
+            'persona' => new PersonaResource($persona),
         ]);
     }
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        $this->autenticacion->cerrarSesion($request->user());
 
         return response()->json(['message' => 'Sesión cerrada.']);
     }

@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\VerCasoRequest;
+use App\Http\Resources\CasoResource;
+use App\Http\Resources\CasoResumenResource;
 use App\Models\Caso;
 use Illuminate\Http\Request;
 
@@ -10,24 +13,15 @@ class CasoController extends Controller
 {
     public function index(Request $request)
     {
-        return response()->json(
-            $request->user()->casos()->with('consulta')->orderByDesc('abierto_en')->get()
-        );
+        $casos = $request->user()->casos()->with('consulta')->orderByDesc('abierto_en')->get();
+
+        return CasoResumenResource::collection($casos);
     }
 
-    public function show(Request $request, Caso $caso)
+    public function show(VerCasoRequest $request, Caso $caso)
     {
-        $this->autorizarLectura($request, $caso);
-
         $caso->load(['consulta', 'eventos', 'documentos', 'consentimientos']);
 
-        return response()->json($caso);
-    }
-
-    private function autorizarLectura(Request $request, Caso $caso): void
-    {
-        if ($caso->persona_id !== $request->user()->id) {
-            abort(403, 'No tienes permiso para leer este caso.');
-        }
+        return new CasoResource($caso);
     }
 }

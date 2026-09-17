@@ -66,6 +66,41 @@ Voz (fase 2,                          │                   │    (colas, sched
 3. La bitácora (`eventos`) y los documentos generados son append-only: el modelo rechaza
    `update`/`delete` a nivel de aplicación (`App\Domain\Casos\Exceptions\BitacoraInmutableException`).
 
+### Capas del backend
+
+El backend sigue una separación explícita en cuatro capas, para que cada archivo tenga una sola
+responsabilidad y el proyecto se pueda hacer crecer sin que los controladores se vuelvan un cajón
+de sastre:
+
+```
+Http/Controllers   → delgados: reciben el Request ya validado, llaman UN servicio, devuelven UN Resource
+Http/Requests      → toda la validación de entrada y las reglas de autorización (Policies)
+Services/<módulo>  → orquestan un caso de uso completo (ej. firmar consentimiento = crear
+                      registro + avisar al motor + encolar el job); un archivo por módulo
+Domain/Casos       → el motor: reglas de negocio puras (máquina de estados, plazos, agentes),
+                      sin saber nada de HTTP ni de Eloquent más allá de los modelos
+Http/Resources     → la forma exacta que ve el frontend, desacoplada de las columnas de la tabla
+```
+
+Ejemplo concreto — firmar un consentimiento:
+
+```
+POST /api/casos/{caso}/consentimiento
+  → FirmarConsentimientoRequest   (autoriza vía CasoPolicy::autorizar)
+  → ConsentimientoController::firmar()   (5 líneas: llama al servicio, traduce excepciones)
+  → ConsentimientoService::firmar()      (el caso de uso completo)
+  → CaseStateMachine::transicionar()     (la regla de negocio: sin consentimiento no hay en_gestion)
+  → ConsentimientoResource                (la respuesta)
+```
+
+Las 6 herramientas del agente siguen el mismo patrón a través de `HerramientasAgenteService`, con
+un Form Request por herramienta (`app/Http/Requests/Agente/`) y Resources para `Caso`,
+`Documento`, `Evento` y `Consentimiento`.
+
+Autorización: `CasoPolicy` y `ConsentimientoPolicy` (Laravel Policies estándar) deciden si la
+persona autenticada puede ver o actuar sobre un caso/consentimiento — se invocan desde los propios
+Form Requests (`$this->user()->can(...)`), no desde código repetido en cada controlador.
+
 ### Dominio (`backend/app/Domain/Casos`)
 
 | Pieza | Responsabilidad |
