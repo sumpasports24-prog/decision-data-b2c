@@ -69,6 +69,38 @@ Todos verificables en el historial de commits y en la propia base de código:
    devolviendo un 500 genérico en vez de un 422 claro (inconsistente con cómo `avanzarEstado` sí
    maneja ese mismo caso). Se corrigió antes de que hubiera un test que lo hiciera evidente,
    revisando la simetría entre ambos métodos.
+6. **Los tests dentro de Docker corrían contra la base de datos real de la demo**, no contra
+   sqlite en memoria. `phpunit.xml` declara `DB_CONNECTION=sqlite` como variable de entorno, pero
+   sin `force="true"` PHPUnit no sobreescribe una variable que el proceso ya trae del sistema real
+   — y dentro del contenedor `app`, `DB_CONNECTION` sí llega como variable real (vía `env_file` en
+   `docker-compose.yml`). Resultado: `php artisan test` ejecutó `migrate:fresh` sobre la base MySQL
+   de la demo y la dejó vacía. Se descubrió corriendo la suite manualmente dentro del contenedor
+   como parte de la verificación de este mismo stack, no por un reporte externo. Corrección: forzar
+   (`force="true"`) las variables críticas en `phpunit.xml`, y quitar además el `env_file` que
+   filtraba la configuración de desarrollo local hacia los contenedores (ver README/commit
+   `fix: 5 bugs reales...` para el resto de bugs de Docker encontrados de la misma forma: probando
+   el `docker compose up` real en vez de asumir que un `docker-compose.yml` que "se ve bien" ya
+   funciona).
+7. **Healthcheck de `app` fallaba siempre.** `wget http://localhost:8000/up` desde dentro del
+   propio contenedor daba "connection refused", aunque el log mostraba el servidor corriendo. Causa:
+   en Alpine, `localhost` resuelve primero a `::1` (IPv6), y el servidor embebido de PHP solo
+   escucha en IPv4. Corrección: usar `127.0.0.1` explícito en el healthcheck.
+8. **mkdir con expansión de llaves no funciona en `sh`.** El Dockerfile tenía
+   `mkdir -p storage/framework/{cache,sessions,views,testing}`, que en bash crea 4 carpetas pero en
+   `sh` (el shell real de `RUN` en Docker) crea una sola carpeta llamada literalmente
+   `{cache,sessions,views,testing}`. Faltaba `storage/framework/sessions`, y con `SESSION_DRIVER=file`
+   la app respondía 500 en todo, incluida `/up` ("Please provide a valid cache path"). Corrección:
+   rutas explícitas, una por una.
+9. **`artisan key:generate` se niega a correr dentro de Docker.** Con `APP_KEY` presente como
+   variable de entorno real (aunque vacía), el comando aborta con "APP_KEY is already present in
+   the environment" en vez de escribir en `.env`. Corrección: generar la key y escribirla
+   directamente en el entrypoint, sin pasar por ese comando.
+10. **La espera a la base de datos en el entrypoint nunca terminaba.** Usaba `php artisan db:show`
+    como sonda de "¿ya puedo conectarme?", pero ese comando usa `Number::format()`, que requiere la
+    extensión `intl` — no instalada en la imagen — y truena con `RuntimeException` aunque la
+    conexión a MySQL sí funcione. El contenedor `worker` se quedaba en un loop infinito de
+    "Esperando a la base de datos...". Corrección: sondar con una conexión PDO directa en vez de un
+    comando que hace trabajo de más; se instaló `intl` de todas formas por si algo más lo necesita.
 
 ## Pruebas y controles usados para verificar calidad y seguridad
 
