@@ -14,12 +14,14 @@ class LogDriver implements NotificacionDriver
 {
     public function enviar(Persona $persona, string $plantilla, array $variables = []): array
     {
+        $mensaje = MensajeNotificacion::renderizar($plantilla, $variables);
+
         Log::channel(config('logging.default'))->info('[notificacion:log] '.$plantilla, [
             'persona_id' => $persona->id,
             'telefono' => $persona->telefono_e164,
-            'variables' => $variables,
+            'mensaje' => $mensaje,
         ]);
 
-        return ['proveedor_id' => null, 'enviado' => true];
+        return ['proveedor_id' => null, 'enviado' => true, 'mensaje' => $mensaje];
     }
 }

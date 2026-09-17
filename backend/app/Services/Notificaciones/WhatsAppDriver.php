@@ -16,6 +16,7 @@ class WhatsAppDriver implements NotificacionDriver
     public function enviar(Persona $persona, string $plantilla, array $variables = []): array
     {
         $telefono = ltrim($persona->telefono_e164, '+');
+        $mensaje = MensajeNotificacion::renderizar($plantilla, $variables);
 
         $respuesta = Http::withToken(config('services.whatsapp.token'))
             ->baseUrl('https://graph.facebook.com/v20.0')
@@ -43,9 +44,9 @@ class WhatsAppDriver implements NotificacionDriver
                 'body' => $respuesta->body(),
             ]);
 
-            return ['proveedor_id' => null, 'enviado' => false];
+            return ['proveedor_id' => null, 'enviado' => false, 'mensaje' => $mensaje];
         }
 
-        return ['proveedor_id' => data_get($respuesta->json(), 'messages.0.id'), 'enviado' => true];
+        return ['proveedor_id' => data_get($respuesta->json(), 'messages.0.id'), 'enviado' => true, 'mensaje' => $mensaje];
     }
 }
