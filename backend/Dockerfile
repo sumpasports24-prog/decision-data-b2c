@@ -8,7 +8,8 @@ RUN composer install --no-scripts --no-interaction --prefer-dist --no-progress
 
 FROM php:8.3-cli-alpine
 
-RUN docker-php-ext-install pdo_mysql bcmath
+RUN apk add --no-cache icu-dev \
+    && docker-php-ext-install pdo_mysql bcmath intl
 
 WORKDIR /app
 
@@ -17,7 +18,7 @@ COPY . .
 
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh \
-    && mkdir -p storage/framework/{cache,sessions,views,testing} storage/logs bootstrap/cache \
+    && mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/framework/testing storage/logs bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
 EXPOSE 8000

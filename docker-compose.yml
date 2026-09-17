@@ -22,12 +22,16 @@ services:
       timeout: 5s
       retries: 10
 
+  # Nota: `app`, `worker` y `scheduler` NO usan env_file apuntando a
+  # backend/.env. Ese archivo es para desarrollo local sin Docker y puede
+  # traer valores incompatibles (p. ej. sqlite en vez de mysql) — si se
+  # cargara aquí, esas variables de entorno reales pisarían silenciosamente
+  # al .env que el propio entrypoint genera DENTRO del contenedor a partir
+  # de .env.example (que ya trae los hosts correctos de esta red: mysql,
+  # redis). Nos pasó una vez: quedó corriendo con sqlite y cola `database`
+  # sin que ningún log lo dejara obvio.
   app:
     build: ./backend
-    env_file: ./backend/.env
-    environment:
-      DB_HOST: mysql
-      REDIS_HOST: redis
     ports:
       - "8000:8000"
     depends_on:
@@ -36,7 +40,9 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8000/up"]
+      # 127.0.0.1 explícito: en Alpine "localhost" resuelve primero a ::1 y el
+      # servidor de PHP solo escucha en IPv4, así que wget con "localhost" falla.
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/up"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -44,10 +50,6 @@ services:
 
   worker:
     build: ./backend
-    env_file: ./backend/.env
-    environment:
-      DB_HOST: mysql
-      REDIS_HOST: redis
     command: ["php", "artisan", "queue:work", "--tries=3", "--sleep=1"]
     depends_on:
       app:
@@ -55,10 +57,6 @@ services:
 
   scheduler:
     build: ./backend
-    env_file: ./backend/.env
-    environment:
-      DB_HOST: mysql
-      REDIS_HOST: redis
     command: ["php", "artisan", "schedule:work"]
     depends_on:
       app:

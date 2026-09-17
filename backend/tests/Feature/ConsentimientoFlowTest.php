@@ -3,9 +3,11 @@
 namespace Tests\Feature;
 
 use App\Domain\Casos\CasoEstado;
+use App\Jobs\GestionarCasoJob;
 use App\Models\Caso;
 use App\Models\Persona;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Bus;
 use Tests\TestCase;
 
 class ConsentimientoFlowTest extends TestCase
@@ -35,8 +37,13 @@ class ConsentimientoFlowTest extends TestCase
         $this->postJson('/api/auth/login', ['cedula' => '1710034065'])->assertStatus(404);
     }
 
-    public function test_firmar_consentimiento_autoriza_el_caso_y_dispara_la_gestion_en_cola(): void
+    public function test_firmar_consentimiento_autoriza_el_caso_y_encola_la_gestion(): void
     {
+        // No depende del QUEUE_CONNECTION real del entorno (sync en phpunit.xml,
+        // pero redis dentro de Docker): se verifica que el job se encola con el
+        // caso correcto, sin acoplarse a si se procesa en el mismo request o no.
+        Bus::fake();
+
         $persona = Persona::factory()->create();
         $caso = Caso::factory()->enEstado(CasoEstado::Notificado)->create(['persona_id' => $persona->id]);
 
@@ -44,9 +51,12 @@ class ConsentimientoFlowTest extends TestCase
             ->postJson("/api/casos/{$caso->id}/consentimiento");
 
         $respuesta->assertStatus(201);
-        $this->assertSame(CasoEstado::EnGestion, $caso->refresh()->estado); // queue sync en testing
-        $this->assertDatabaseHas('documentos', ['caso_id' => $caso->id, 'tipo' => 'oposicion_lopdp']);
+        $this->assertSame(CasoEstado::Autorizado, $caso->refresh()->estado);
+        Bus::assertDispatched(GestionarCasoJob::class, fn ($job) => $job->caso->is($caso));
     }
+
+    // Qué hace el job cuando se procesa de verdad (Gestor::gestionar) ya está
+    // cubierto por tests/Unit/Domain/Agentes/GestorTest.php.
 
     public function test_una_persona_no_puede_leer_el_caso_de_otra(): void
     {
