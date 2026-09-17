@@ -1,4 +1,8 @@
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api';
+// Si VITE_API_URL no está fijada explícitamente, se calcula a partir del host
+// desde el que se cargó la página. "localhost" quedaría fijo en el build y
+// apuntaría al propio dispositivo del usuario, no al servidor, cuando la app
+// se abre desde otra máquina en la red (celular, laptop de otra persona, etc).
+const BASE_URL = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:8000/api`;
 
 export class ApiError extends Error {
   constructor(message, { status, codigoReferencia, errores } = {}) {
