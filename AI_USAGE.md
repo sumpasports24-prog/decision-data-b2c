@@ -114,6 +114,11 @@ Todos verificables en el historial de commits y en la propia base de código:
   dar por buena cualquier pantalla.
 - Revisión manual de que ningún archivo con secretos (`.env`, `database.sqlite`) quedó en el
   historial de git (`.gitignore` revisado antes del primer commit).
+- Verificación visual real del frontend, no solo "se ve bien en el código": se instaló Playwright
+  con Chromium headless y se corrió contra el stack de Docker real (login, Panorama y detalle de
+  caso, en viewport de escritorio y de móvil de 390px, más los estados de error de cédula y el
+  modal de confirmación de revocar). Eso fue lo que hizo evidente un wrap feo de la fecha en
+  "huella de consulta" en móvil, que se corrigió antes de darlo por terminado.
 
 ## Limitación declarada sobre el uso de IA en el runtime de la app
 
