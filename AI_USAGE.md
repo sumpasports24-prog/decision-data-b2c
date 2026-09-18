@@ -40,9 +40,9 @@ memoria al final. Documenta el uso real de IA, incluidos los errores y las corre
   laravel/boost`). Se decidió omitirlo por el tiempo tan ajustado de la entrega y porque su
   instalación es interactiva; se documenta aquí para que quede explícito por qué el `CLAUDE.md`
   que genera Laravel no está en el repo.
-- **Flujo de ramas `adrian` → `developer` → `producción`:** se decidió reestructurar el repositorio
+- **Flujo de ramas `adrian` → `developer` → `produccion`:** se decidió reestructurar el repositorio
   para que no todo viviera en `main` — cada commit nace en `adrian` (desarrollo), se integra en
-  `developer`, y solo lo verificado llega a `producción` (la rama principal reportada a Decision
+  `developer`, y solo lo verificado llega a `produccion` (la rama principal reportada a Decision
   Data). Es un cambio de proceso pedido explícitamente por el candidato, no una sugerencia de la IA.
 - **Actualización en vivo del Panorama y del caso:** el candidato pidió más diferenciación visual
   frente a otras propuestas. La IA propuso pulir la interfaz sin cambiar el fondo del producto; el
