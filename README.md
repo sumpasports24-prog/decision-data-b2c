@@ -11,6 +11,12 @@ Prueba técnica final — proceso de selección de desarrolladores 2026 (Decisio
 Ver el brief completo de producto y arquitectura en [`docs/BRIEF-decision-data.md`](docs/BRIEF-decision-data.md)
 (documento de trabajo interno, no forma parte del enunciado original de Decision Data).
 
+**Demo pública:** https://demo.sumpasports.com — el mismo stack de Docker Compose de abajo, expuesto
+por un Cloudflare Tunnel (conexión saliente desde el servidor; ningún puerto abierto en el router ni
+en el firewall). Cédula de prueba: `1710034065`. Es un servidor personal, no una infraestructura
+gestionada — la fuente de verdad y lo que hay que poder correr sin depender de esta URL sigue siendo
+`docker compose up` en cualquier máquina, como pide el enunciado.
+
 ## Flujo de ramas
 
 | Rama | Para qué |
