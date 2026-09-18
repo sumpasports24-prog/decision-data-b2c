@@ -57,7 +57,7 @@ export function PanoramaPage() {
                   <div>
                     <strong>Hay una consulta por revisar</strong>
                     <p className="texto-secundario" style={{ margin: '3px 0 0', fontSize: '0.9rem' }}>
-                      {caso.consulta?.entidad_nombre} revisó tu historial. Confirmá si la reconocés.
+                      {caso.consulta?.entidad_nombre} revisó tu historial. Confirma si la reconoces.
                     </p>
                   </div>
                 </div>

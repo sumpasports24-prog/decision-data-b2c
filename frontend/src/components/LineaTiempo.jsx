@@ -8,7 +8,7 @@ const ETIQUETAS = {
   consentimiento_firmado: 'Firmaste la autorización',
   consentimiento_revocado: 'Revocaste la autorización',
   oposicion_generada: 'El Gestor redactó la oposición',
-  consulta_reconocida: 'Confirmaste que reconocés esta consulta',
+  consulta_reconocida: 'Confirmaste que reconoces esta consulta',
 };
 
 const ICONOS = {

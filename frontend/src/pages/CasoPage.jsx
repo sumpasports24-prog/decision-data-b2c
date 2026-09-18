@@ -84,7 +84,7 @@ export function CasoPage() {
             <div className="columna-flexible">
               {caso.estado === 'notificado' && !mostrarDisputa && (
                 <section className="tarjeta" style={{ borderColor: 'var(--ambar)', display: 'grid', gap: 14 }}>
-                  <strong>{caso.consulta.entidad_nombre} revisó tu historial. ¿La reconocés?</strong>
+                  <strong>{caso.consulta.entidad_nombre} revisó tu historial. ¿La reconoces?</strong>
                   <p className="texto-secundario" style={{ margin: 0, fontSize: '0.9rem' }}>
                     Motivo declarado: {caso.consulta.motivo}
                   </p>
@@ -135,7 +135,7 @@ export function CasoPage() {
                       }}
                     />
                     <span className="texto-secundario" style={{ fontSize: '0.78rem' }}>
-                      Si lo escribís, el Gestor lo cita como argumento de hecho en el documento de oposición.
+                      Si lo escribes, el Gestor lo cita como argumento de hecho en el documento de oposición.
                     </span>
                   </label>
                   {error && <EstadoFalla error={error} onReintentar={() => firmar(contexto)} />}
@@ -154,7 +154,7 @@ export function CasoPage() {
                 <section className="tarjeta" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <ShieldCheck size={18} color="var(--verde)" aria-hidden="true" />
                   <p className="texto-secundario" style={{ margin: 0, fontSize: '0.9rem' }}>
-                    Confirmaste que reconocés esta consulta. No hace falta ninguna acción más.
+                    Confirmaste que reconoces esta consulta. No hace falta ninguna acción más.
                   </p>
                 </section>
               )}
