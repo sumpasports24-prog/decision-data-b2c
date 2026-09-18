@@ -40,6 +40,11 @@ class ConsentimientoService
 
         $caso->registrarEvento('persona', 'consentimiento_firmado', ['consentimiento_id' => $consentimiento->id]);
 
+        // La persona acaba de decir "no la reconozco": esto es lo que pone
+        // reconocida = false, no al revés. El Centinela solo vigila lo que
+        // nadie ha revisado (null); false es la salida de esta decisión.
+        $caso->consulta->update(['reconocida' => false]);
+
         $this->motor->transicionar($caso, CasoEstado::Autorizado, actor: 'persona');
 
         GestionarCasoJob::dispatch($caso);

@@ -18,6 +18,12 @@ use Illuminate\Database\Seeder;
  * Gestor, CaseStateMachine) en vez de insertar estados "a mano", para que
  * los datos sembrados respeten exactamente las mismas reglas de negocio.
  *
+ * Toda consulta nace con `reconocida = null` — nadie, ni el seeder, decide
+ * de antemano qué es sospechoso. El Centinela vigila TODO lo que nadie ha
+ * revisado (ver Centinela::detectar()) y abre un caso por igual para la
+ * consulta que después se reconoce sin drama y la que termina en disputa;
+ * la diferencia la pone la persona, no el dato con el que nace la consulta.
+ *
  * Cédula de demo para el login (ver AuthController): 1710034065
  */
 class EscenarioDemoSeeder extends Seeder
@@ -46,46 +52,44 @@ class EscenarioDemoSeeder extends Seeder
             'identidad_verificada_en' => now()->subDays(40),
         ]);
 
-        // Consulta reconocida: aparece en la huella, no genera caso.
-        Consulta::create([
+        // Las 4 consultas de abajo nacen SIN REVISAR (reconocida = null, el
+        // default del modelo). El Centinela las toma a todas por igual —
+        // incluida la de Pichincha, que va a terminar reconocida sin drama:
+        // eso también pasa por el mismo camino de revisión, no es un atajo.
+
+        // Se reconoce en dos clics ("sí, fui yo") en vivo durante la demo.
+        $consultaPichincha = Consulta::create([
             'persona_id' => $ana->id,
             'entidad_id' => $bancoPichincha->id,
             'motivo' => 'Solicitud de crédito de consumo',
             'consultada_en' => now()->subDays(10),
-            'reconocida' => true,
         ]);
 
-        // Consulta no reconocida que ya avanzó hasta "notificado": para firmar en vivo desde el frontend.
-        // El motivo menciona Cuenca a propósito: es el mismo dato que el guion de demo usa como
-        // contexto al firmar ("nunca estuve en Cuenca"), para que el porqué de la disputa se lea
-        // solo, sin tener que explicarlo en voz alta.
+        // Se disputa con contexto ("yo nunca estuve en Cuenca...") en vivo durante la demo.
         $consultaJep = Consulta::create([
             'persona_id' => $ana->id,
             'entidad_id' => $jep->id,
             'motivo' => 'Solicitud de crédito de consumo — agencia Cuenca',
             'consultada_en' => now()->subDays(3),
-            'reconocida' => false,
         ]);
 
-        // Consulta que ya se gestionó por completo hasta "en_gestion", con plazo vencido: para escalar en vivo.
+        // Ya se gestionó por completo hasta "en_gestion", con plazo vencido: para escalar en vivo.
         $consultaProdu = Consulta::create([
             'persona_id' => $ana->id,
             'entidad_id' => $produbanco->id,
             'motivo' => 'Apertura de cuenta corriente — agencia Portoviejo',
             'consultada_en' => now()->subDays(25),
-            'reconocida' => false,
         ]);
 
-        // Consulta que llega hasta "resuelto": para mostrar el ciclo completo cerrado.
+        // Recorrido completo hasta "resuelto": para mostrar el ciclo cerrado.
         $consultaGuayaquil = Consulta::create([
             'persona_id' => $ana->id,
             'entidad_id' => $bancoGuayaquil->id,
             'motivo' => 'Tarjeta de crédito adicional a nombre de un tercero',
             'consultada_en' => now()->subDays(40),
-            'reconocida' => false,
         ]);
 
-        // El Centinela abre y notifica los 3 casos (JEP, Produbanco, Guayaquil) de una vez, como en producción.
+        // El Centinela abre y notifica los 4 casos (Pichincha, JEP, Produbanco, Guayaquil) de una vez, como en producción.
         app(Centinela::class)->detectar();
 
         // Esta consulta se crea DESPUÉS de correr el Centinela a propósito: queda sin
@@ -96,21 +100,21 @@ class EscenarioDemoSeeder extends Seeder
             'entidad_id' => $bancoAustro->id,
             'motivo' => 'Consulta de score crediticio por canal digital no registrado a su nombre',
             'consultada_en' => now()->subHours(6),
-            'reconocida' => false,
         ]);
 
-        // JEP se queda en "notificado": listo para firmar consentimiento desde el frontend.
-        // (No se toca más.)
+        // Pichincha y JEP se quedan en "notificado": listas para las dos ramas
+        // en vivo desde el frontend ("Sí, fui yo" / "Yo no autoricé esto").
+        // (No se tocan más.)
 
-        // Produbanco: la persona autoriza y el Gestor gestiona; luego forzamos el vencimiento
+        // Produbanco: la persona dispone y el Gestor gestiona; luego forzamos el vencimiento
         // del plazo para poder escalar en vivo durante la presentación.
         $casoProdu = $consultaProdu->fresh()->caso;
-        $this->autorizarYGestionar($motor, $casoProdu);
+        $this->disputarYGestionar($motor, $casoProdu);
         $casoProdu->update(['vence_en' => now()->subDay()]);
 
         // Banco Guayaquil: recorrido completo hasta resuelto.
         $casoResuelto = $consultaGuayaquil->fresh()->caso;
-        $this->autorizarYGestionar($motor, $casoResuelto);
+        $this->disputarYGestionar($motor, $casoResuelto);
         $motor->transicionar($casoResuelto->fresh(), CasoEstado::Resuelto, actor: 'sistema', contexto: [
             'motivo' => 'entidad_respondio_conforme',
         ]);
@@ -141,8 +145,15 @@ class EscenarioDemoSeeder extends Seeder
         ]);
     }
 
-    private function autorizarYGestionar(CaseStateMachine $motor, $caso): void
+    /**
+     * Simula, sin pasar por HTTP, lo que hace ConsentimientoService::firmar()
+     * seguido de Gestor::gestionar(): la persona dice "no la reconozco" (lo
+     * que marca `reconocida = false`), firma, y el Gestor redacta y avanza.
+     */
+    private function disputarYGestionar(CaseStateMachine $motor, $caso): void
     {
+        $caso->consulta->update(['reconocida' => false]);
+
         $alcance = $motor->alcancePorDefecto($caso);
 
         Consentimiento::create([

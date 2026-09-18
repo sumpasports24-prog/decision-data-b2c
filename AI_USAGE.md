@@ -205,7 +205,7 @@ excepción que justifica el motor, no el camino más transitado.
   autorización ni Gestor — no hay nada que gestionar cuando la persona sí reconoce la consulta).
 - Nuevo endpoint `POST /casos/{caso}/reconocer` (`CasoService::reconocer`), que marca
   `consultas.reconocida = true` y cierra el caso en dos pasos, sin consentimiento de por medio.
-- En `CasoPage.jsx`, la pantalla de un caso `notificado` ahora pregunta "¿la reconocés?" con dos
+- En `CasoPage.jsx`, la pantalla de un caso `notificado` ahora pregunta "¿la reconoces?" con dos
   botones — "Sí, fui yo" y "Yo no autoricé esto" — en vez de ir directo a un formulario de
   autorización que presuponía la sospecha.
 - Copy ajustado a propósito: nunca "aprobar" (un banco no espera tu aprobación para una consulta ya
@@ -218,6 +218,40 @@ texto de interfaz. Documentado acá porque cambia la lectura completa del produc
 un evaluador ve un sistema que trata cada consulta bancaria como sospechosa por defecto, lo cual es
 falso y, sin querer, plantea a Decision Data como una herramienta contra sus propios socios
 bancarios en vez de una a favor de la transparencia con el titular.
+
+## Corrección de fondo: el Centinela vigilaba `false`, no `null` (detectado por el candidato)
+
+El camino de "reconocer" (sección anterior) resolvió cómo se ve la decisión en pantalla, pero dejó
+una grieta debajo que el candidato encontró revisando el propio catálogo de casos de uso: UC-01
+describía una consulta que nace **ya** `reconocida = true`, sin pasar nunca por revisión ni caso —
+mientras que las demás sí pasaban por el Centinela. Su pregunta fue exacta: *"¿no habíamos dicho que
+toda consulta entra a revisión, por más que el cliente ya haya gestionado todo en el banco?"*
+
+Tenía razón, y el motivo es una imposibilidad lógica que se había colado sin que nadie la notara: el
+`Centinela::detectar()` filtraba `where('reconocida', false)` — es decir, **solo actuaba sobre
+consultas que ya estaban marcadas como no reconocidas antes de que la persona dijera nada.** Pero el
+sistema no tiene forma de saber de antemano que algo "no se reconoce" — eso solo lo puede decidir el
+titular. La única fuente que producía ese `false` de entrada era el propio seeder de la demo,
+simulando un resultado que en la app real nunca se generaría solo.
+
+**Corrección:**
+- `Centinela::detectar()` ahora filtra `whereNull('reconocida')`: vigila **toda** consulta sin
+  revisar, sin distinguir de antemano cuál terminará reconocida y cuál en disputa.
+- `ConsentimientoService::firmar()` ahora marca `consultas.reconocida = false` **en el momento en
+  que la persona firma** diciendo "no la reconozco" — es la salida de esa decisión, ya no una
+  condición previa. `CasoService::reconocer()` ya hacía lo simétrico con `true`.
+- El mensaje de WhatsApp (`MensajeNotificacion`) dejó de decir "detectamos que... y no la
+  reconociste" (presuponía la conclusión) y pasó a "confirma si la reconoces".
+- El seeder de demo se reescribió para que las 4 consultas de Ana nazcan `null` y el Centinela las
+  abra a todas por igual (incluida la de Banco Pichincha, que ahora también pasa por "notificado" y
+  se resuelve con "Sí, fui yo" en vivo, en vez de nacer ya resuelta).
+- 3 tests nuevos/reescritos (`CentinelaTest`, `ConsentimientoFlowTest`) fijan la semántica correcta:
+  el Centinela no actúa sobre una consulta ya reconocida ni sobre una ya disputada con caso propio,
+  y firmar deja constancia de `reconocida = false` como resultado.
+
+Es el tipo de error que no rompe ningún test hasta que alguien piensa el flujo completo de punta a
+punta en vez de por partes — exactamente lo que se le pide al candidato poder hacer en la
+modificación en vivo de la presentación.
 
 ## Decisiones de producto evaluadas y descartadas la última noche
 
@@ -243,7 +277,7 @@ deliberada y no una limitación de tiempo disfrazada:
 
 ## Pruebas y controles usados para verificar calidad y seguridad
 
-- 49 tests automatizados (`php artisan test`) cubriendo los 6 puntos mínimos que pedía el
+- 50 tests automatizados (`php artisan test`) cubriendo los 6 puntos mínimos que pedía el
   enunciado, el contrato completo de las 6 herramientas del agente, el flujo de consentimiento vía
   HTTP (incluido que el contexto que escribe la persona se persiste y se cita textualmente en el
   documento generado, y que su ausencia no rompe nada), el desglose de factores del score, y el

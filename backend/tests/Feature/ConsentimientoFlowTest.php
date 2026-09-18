@@ -53,6 +53,10 @@ class ConsentimientoFlowTest extends TestCase
         $respuesta->assertStatus(201);
         $this->assertSame(CasoEstado::Autorizado, $caso->refresh()->estado);
         Bus::assertDispatched(GestionarCasoJob::class, fn ($job) => $job->caso->is($caso));
+
+        // Firmar es la decisión "no la reconozco": reconocida pasa a false
+        // como CONSECUENCIA de esto, no era una condición previa.
+        $this->assertFalse($caso->consulta->fresh()->reconocida);
     }
 
     // Qué hace el job cuando se procesa de verdad (Gestor::gestionar) ya está

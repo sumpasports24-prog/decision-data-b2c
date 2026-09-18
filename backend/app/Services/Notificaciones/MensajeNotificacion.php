@@ -13,8 +13,8 @@ namespace App\Services\Notificaciones;
 class MensajeNotificacion
 {
     private const PLANTILLAS = [
-        'consulta_no_reconocida' => 'Hola {0}, detectamos que *{1}* consultó tu historial crediticio y no la reconociste. '
-            .'Podemos presentar una oposición formal en tu nombre bajo la LOPDP. Caso {2}.',
+        'consulta_no_reconocida' => 'Hola {0}, *{1}* consultó tu historial crediticio. Entra a Panorama y confirma si la '
+            .'reconoces — si no fuiste tú, presentamos una oposición formal en tu nombre bajo la LOPDP. Caso {2}.',
         'oposicion_enviada' => 'Listo {0}. La oposición ante *{1}* fue emitida y quedó registrada como evidencia. '
             .'Te aviso apenas haya respuesta o si vence el plazo. Caso {2}.',
     ];

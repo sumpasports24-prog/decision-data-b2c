@@ -12,9 +12,16 @@ use Illuminate\Support\Collection;
 
 /**
  * Corre sin usuario, como job programado (ver routes/console.php). Encuentra
- * consultas no reconocidas sin caso todavía, abre el caso, arranca el reloj
- * del plazo legal y notifica a la persona. No razona con IA: es determinista
- * a propósito, para que la detección sea auditable.
+ * consultas SIN REVISAR (reconocida = null) y sin caso todavía, abre el
+ * caso, arranca el reloj del plazo legal y notifica a la persona para que
+ * decida. No razona con IA: es determinista a propósito, para que la
+ * detección sea auditable.
+ *
+ * A propósito NO filtra por `reconocida = false`: el sistema no puede saber
+ * de antemano que una consulta "no se reconoce" — eso solo lo decide la
+ * persona (ver UC-03). El Centinela vigila TODA consulta nueva sin revisar,
+ * sea o no, al final, algo que la persona reconozca. `false` ya no es una
+ * condición de entrada: es el resultado de que la persona dijo que no.
  */
 class Centinela
 {
@@ -30,7 +37,7 @@ class Centinela
     public function detectar(): Collection
     {
         return Consulta::query()
-            ->where('reconocida', false)
+            ->whereNull('reconocida')
             ->whereDoesntHave('caso')
             ->get()
             ->map(fn (Consulta $consulta) => $this->abrirCaso($consulta));

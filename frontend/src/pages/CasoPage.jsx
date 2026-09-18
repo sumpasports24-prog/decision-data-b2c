@@ -115,7 +115,7 @@ export function CasoPage() {
                   </p>
                   <label style={{ display: 'grid', gap: 6 }}>
                     <span className="texto-secundario" style={{ fontSize: '0.85rem' }}>
-                      Contanos qué recordás de esa fecha (opcional)
+                      Cuéntanos qué recuerdas de esa fecha (opcional)
                     </span>
                     <textarea
                       value={contexto}

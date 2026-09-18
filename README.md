@@ -120,13 +120,13 @@ Form Requests (`$this->user()->can(...)`), no desde código repetido en cada con
 | `CaseStateMachine` | Único punto autorizado a cambiar `casos.estado`; exige consentimiento vigente para `en_gestion` |
 | `DeadlineClock` | Días hábiles (feriados de Ecuador configurables), cálculo y detección de vencimiento |
 | `EscaladorDePlazos` | Escala a `escalado` todo caso `en_gestion` vencido (comando `casos:escalar-vencidos`) |
-| `Agentes\Centinela` | Detecta consultas no reconocidas sin caso, abre el caso, notifica (comando `centinela:ejecutar`) |
+| `Agentes\Centinela` | Detecta consultas sin revisar (`reconocida = null`) que aún no tienen caso, lo abre, notifica (comando `centinela:ejecutar`) |
 | `Agentes\Gestor` | Redacta la oposición (vía `AgenteRedactorInterface`), la persiste, avanza el caso |
 
 ### La IA visible del producto: el Gestor con contexto de la persona
 
 La única función de IA que se presenta como funcional (no simulada) es la redacción de la
-oposición. Al firmar, la persona puede agregar un texto libre ("contanos qué recordás de esa
+oposición. Al firmar, la persona puede agregar un texto libre ("cuéntanos qué recuerdas de esa
 fecha") que se guarda en `consentimientos.contexto` y entra directo al prompt de
 `ClaudeRedactor`/`RedactorStub`: el documento generado cita ese texto como argumento de hecho, en
 vez de repetir solo los datos que ya traía el caso. El prompt incluye una guarda explícita contra
@@ -247,7 +247,7 @@ cd backend
 php artisan test
 ```
 
-49 tests, todos sobre el motor de casos y su superficie HTTP: transiciones inválidas, agente sin
+50 tests, todos sobre el motor de casos y su superficie HTTP: transiciones inválidas, agente sin
 consentimiento vigente, cálculo de días hábiles y vencimiento, escalamiento automático, bitácora
 inmutable, validación de cédula ecuatoriana (dígito verificador módulo 10, no solo formato), el
 contrato completo de las 6 herramientas del agente con tokens de alcance y expiración, que el
@@ -271,23 +271,26 @@ npm run build                     # falla si hay errores de compilación/import
 > y corre esos dos comandos tú mismo, en el momento del guión, con `docker compose exec app`.
 
 1. **Login** con la cédula `1710034065`.
-2. **Panorama**: verás 3 casos (Cooperativa JEP en `notificado`, Produbanco en `en_gestion` con
-   plazo ya vencido, Banco Guayaquil `resuelto`) y una consulta de Banco del Austro sin caso
-   todavía — a propósito, para la detección en vivo.
-3. **Detección en vivo** (desde una terminal, dentro del contenedor `app` o local):
+2. **Panorama**: verás 4 casos — Banco Pichincha y Cooperativa JEP en `notificado` (dos alertas
+   ambar, "hay una consulta por revisar"), Produbanco en `en_gestion` con plazo ya vencido, Banco
+   Guayaquil `resuelto`. Además, una consulta de Banco del Austro sin caso todavía — a propósito,
+   para la detección en vivo. El Centinela abrió los 4 casos por igual, sin distinguir de antemano
+   cuál va a terminar reconocida y cuál en disputa: eso lo decide la persona, no el dato de origen.
+3. **El camino frecuente — reconocer**: entra al caso de Banco Pichincha. Ahí el sistema pregunta
+   "¿la reconoces?", no "autoriza esto". Click en **"Sí, fui yo"**: dos clics y el caso se cierra
+   como `descartado`, sin consentimiento ni Gestor de por medio — porque no hay nada que gestionar.
+   Es el camino que toma la mayoría de las consultas reales; el que sigue es la excepción.
+4. **El camino de disputa — autorizar con contexto**: entra al caso de Cooperativa JEP, click en
+   **"Yo no autoricé esto"**, escribe algo en "cuéntanos qué recuerdas de esa fecha" (ej. *"nunca
+   estuve en Cuenca, ni he pedido crédito en esa cooperativa"*) y firma. El estado pasa a
+   `autorizado` de inmediato (y `consultas.reconocida` pasa a `false` recién en ese momento, como
+   consecuencia de tu decisión); unos segundos después (cuando el `worker` procesa
+   `GestionarCasoJob`) pasa solo a `en_gestion` y el documento generado cita ese texto textualmente.
+5. **Detección en vivo** (desde una terminal, dentro del contenedor `app` o local):
    ```bash
    php artisan centinela:ejecutar
    ```
-   Refresca Panorama: aparece un cuarto caso para Banco del Austro en estado `notificado`.
-4. **El camino frecuente — reconocer**: entra al caso de Banco del Austro. Ahí el sistema pregunta
-   "¿la reconocés?", no "autorizá esto". Click en **"Sí, fui yo"**: dos clics y el caso se cierra
-   como `descartado`, sin consentimiento ni Gestor de por medio — porque no hay nada que gestionar.
-   Es el camino que toma la mayoría de las consultas reales; el que sigue es la excepción.
-5. **El camino de disputa — autorizar con contexto**: entra al caso de Cooperativa JEP, click en
-   **"Yo no autoricé esto"**, escribe algo en "contanos qué recordás de esa fecha" (ej. *"yo nunca
-   estuve en Cuenca, ni he pedido crédito en esa cooperativa"*) y firma. El estado pasa a
-   `autorizado` de inmediato; unos segundos después (cuando el `worker` procesa `GestionarCasoJob`)
-   pasa solo a `en_gestion` y el documento generado cita ese texto textualmente.
+   Refresca Panorama: aparece un quinto caso para Banco del Austro en estado `notificado`.
 6. **Escalamiento en vivo**: el caso de Produbanco ya tiene `vence_en` en el pasado.
    ```bash
    php artisan casos:escalar-vencidos
@@ -317,17 +320,18 @@ npm run build                     # falla si hay errores de compilación/import
 
 ## Limitaciones conocidas y próximos pasos
 
-- **`consultas.reconocida` solo tiene pantalla real una vez que ya hay un caso abierto.** Es un
-  booleano **nullable de 3 estados**: `null` = nadie la revisó todavía (así nace toda consulta
-  nueva), `true` = la persona la reconoce, `false` = la persona confirmó que no. El Centinela
-  (`where('reconocida', false)`) solo actúa sobre ese tercer estado explícito, nunca sobre `null` —
-  una consulta recién llegada no dispara nada hasta que alguien diga algo. Una vez que el Centinela
-  abre el caso, la persona ya tiene control real para decidir: "Sí, fui yo" (`POST
-  /casos/{caso}/reconocer`, pasa a `descartado`) o "Yo no autoricé esto" (dispara la oposición). Lo
-  que **todavía no existe** es un control en `HuellaPage.jsx` para decidir sobre una consulta que
-  llegó en `null` **antes** de que el Centinela la toque — hoy ese valor de arranque solo lo pone el
-  seeder de demo. Es la pieza que falta para que el flujo sea autosuficiente de punta a punta desde
-  el primer día de una consulta, no solo una vez que ya se convirtió en caso.
+- **`consultas.reconocida` es un booleano nullable de 3 estados, y el orden de causalidad importa:**
+  `null` = nadie la revisó todavía (así nace toda consulta, sin excepción — incluida la que
+  terminará reconocida sin drama), `true`/`false` = lo que la persona decide. El Centinela vigila
+  `whereNull('reconocida')`, no `false`: el sistema no puede saber de antemano que algo "no se
+  reconoce" — solo la persona lo sabe. `false` ya no es una condición de entrada al Centinela, es
+  la **salida** de que la persona firmó diciendo "no la reconozco" (`ConsentimientoService::firmar()`
+  lo marca en ese momento); `true` es la salida de "Sí, fui yo" (`CasoController::reconocer`). Con
+  esto, cualquier consulta nueva —autorizada por contrato o no— pasa por el mismo control real de
+  la persona; no hay un atajo donde algunas nacen "ya reconocidas" sin que nadie las mire.
+  Lo que sigue sin existir es un control en `HuellaPage.jsx` para decidir manualmente fuera del
+  ciclo del Centinela (por ejemplo, antes de que corra su próxima ejecución programada) — hoy esa
+  ventana la cierra el propio scheduler cada 5 minutos, no una acción de la persona.
 - Solo se implementa un tipo de caso: consulta no reconocida → oposición LOPDP. Los demás quedan
   definidos en el modelo (`casos.tipo`) sin implementar.
 - El agente **Vocero** (llamadas telefónicas a la entidad) es **fase 2, no implementado**. Existe
@@ -349,7 +353,7 @@ npm run build                     # falla si hay errores de compilación/import
   entorno.
 - El logo (`frontend/src/assets/marca/dd-lockup-white.png`) se descargó directamente de
   `decisiondata.ec` y se usa sin modificar, tal como pide el enunciado.
-- Sin tests end-to-end de frontend (Playwright/Cypress) por tiempo; sí hay 49 tests de backend
+- Sin tests end-to-end de frontend (Playwright/Cypress) por tiempo; sí hay 50 tests de backend
   sobre el motor, que es donde está el riesgo real.
 - **Descartado a propósito, no por falta de tiempo:** un "coach" de salud financiera con KPIs de
   score (metas, tendencias, consejos genéricos). Se evaluó y no se construyó porque es la misma
