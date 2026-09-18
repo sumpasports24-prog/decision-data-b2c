@@ -42,6 +42,24 @@ class CaseStateMachineTest extends TestCase
         $this->motor->transicionar($caso, CasoEstado::Resuelto, actor: 'test');
     }
 
+    public function test_permite_descartar_directo_desde_notificado_sin_consentimiento(): void
+    {
+        $caso = Caso::factory()->enEstado(CasoEstado::Notificado)->create();
+
+        $resultado = $this->motor->transicionar($caso, CasoEstado::Descartado, actor: 'persona');
+
+        $this->assertSame(CasoEstado::Descartado, $resultado->estado);
+    }
+
+    public function test_descartado_es_un_estado_terminal(): void
+    {
+        $caso = Caso::factory()->enEstado(CasoEstado::Descartado)->create();
+
+        $this->expectException(TransicionInvalidaException::class);
+
+        $this->motor->transicionar($caso, CasoEstado::Autorizado, actor: 'test');
+    }
+
     public function test_no_permite_avanzar_a_en_gestion_sin_consentimiento_vigente(): void
     {
         $caso = Caso::factory()->enEstado(CasoEstado::Autorizado)->create();

@@ -9,8 +9,17 @@ const ETIQUETAS = {
   resuelto: 'Resuelto',
 };
 
-/** Stepper visual de los 5 pasos del caso. `escalado` se muestra en el lugar de `en_gestion`, en rojo. */
+/**
+ * Stepper visual de los 5 pasos del caso. `escalado` se muestra en el lugar
+ * de `en_gestion`, en rojo. `descartado` no es un paso del pipeline — es la
+ * rama corta desde `notificado` cuando la persona reconoce la consulta —
+ * así que se muestra aparte, sin píldoras.
+ */
 export function EstadoStepper({ estado }) {
+  if (estado === 'descartado') {
+    return <div className="stepper-descartado">Descartado — la reconociste</div>;
+  }
+
   const pasos = estado === 'escalado' ? PASOS.map((p) => (p === 'en_gestion' ? 'escalado' : p)) : PASOS;
   const indiceActual = pasos.indexOf(estado);
 

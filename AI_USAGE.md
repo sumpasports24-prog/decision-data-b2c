@@ -190,6 +190,35 @@ Todos verificables en el historial de commits y en la propia base de código:
     anterior. Corrección: nuevo helper `frontend/src/utils/reconocimiento.js` con los 3 estados
     explícitos ("Reconocida" / "Pendiente de revisión" / "En disputa"), usado en ambas pantallas.
 
+## Decisión de producto: el camino de "reconocer" (agregado horas antes del cierre)
+
+Surgió al explicarle a el candidato, en lenguaje llano, qué hace el sistema — y a la mitad de esa
+conversación él mismo notó el hueco: *"lo que no veo es una forma de decirle no es sospechoso"*. El
+sistema, hasta ese momento, asumía que toda consulta con `reconocida = false` era necesariamente
+una disputa, y no daba forma de decir simplemente "sí, fui yo". Eso contradecía algo que la propia
+conversación ya había establecido: la mayoría de las consultas de un cliente real de un banco socio
+SÍ están autorizadas por el contrato que firmó al hacerse cliente — el caso de oposición es la
+excepción que justifica el motor, no el camino más transitado.
+
+**Cambio implementado:**
+- Nuevo estado `descartado` en `CasoEstado` (rama corta desde `notificado`, sin pasar por
+  autorización ni Gestor — no hay nada que gestionar cuando la persona sí reconoce la consulta).
+- Nuevo endpoint `POST /casos/{caso}/reconocer` (`CasoService::reconocer`), que marca
+  `consultas.reconocida = true` y cierra el caso en dos pasos, sin consentimiento de por medio.
+- En `CasoPage.jsx`, la pantalla de un caso `notificado` ahora pregunta "¿la reconocés?" con dos
+  botones — "Sí, fui yo" y "Yo no autoricé esto" — en vez de ir directo a un formulario de
+  autorización que presuponía la sospecha.
+- Copy ajustado a propósito: nunca "aprobar" (un banco no espera tu aprobación para una consulta ya
+  autorizada por contrato) y nunca "no es sospechoso" (habla del hecho, "sí fui yo", no de un
+  juicio). La alerta en Panorama pasó de "Hay una consulta que no reconociste" (presuponía la
+  conclusión) a "Hay una consulta por revisar".
+
+No se tocó ninguna tabla nueva — el cambio completo es un estado más en un enum, un endpoint, y
+texto de interfaz. Documentado acá porque cambia la lectura completa del producto: sin este camino,
+un evaluador ve un sistema que trata cada consulta bancaria como sospechosa por defecto, lo cual es
+falso y, sin querer, plantea a Decision Data como una herramienta contra sus propios socios
+bancarios en vez de una a favor de la transparencia con el titular.
+
 ## Decisiones de producto evaluadas y descartadas la última noche
 
 Antes de cerrar, se discutieron con el asistente de IA dos ideas adicionales y se decidió no
@@ -214,10 +243,12 @@ deliberada y no una limitación de tiempo disfrazada:
 
 ## Pruebas y controles usados para verificar calidad y seguridad
 
-- 43 tests automatizados (`php artisan test`) cubriendo los 6 puntos mínimos que pedía el
+- 49 tests automatizados (`php artisan test`) cubriendo los 6 puntos mínimos que pedía el
   enunciado, el contrato completo de las 6 herramientas del agente, el flujo de consentimiento vía
   HTTP (incluido que el contexto que escribe la persona se persiste y se cita textualmente en el
-  documento generado, y que su ausencia no rompe nada), y el desglose de factores del score.
+  documento generado, y que su ausencia no rompe nada), el desglose de factores del score, y el
+  camino corto de reconocer una consulta (transición a `descartado`, quién puede hacerlo, y que un
+  caso ya cerrado por eso no puede reabrirse).
 - Verificación manual end-to-end con `curl` contra un servidor real (no solo tests unitarios):
   login → panorama → firmar consentimiento → cola → `en_gestion` con documento generado, y
   `centinela:ejecutar` / `casos:escalar-vencidos` corridos de verdad, no solo simulados en tests.

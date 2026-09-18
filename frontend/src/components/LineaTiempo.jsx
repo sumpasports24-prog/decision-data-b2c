@@ -1,4 +1,4 @@
-import { Bell, CheckCircle2, FileText, MessageCircle, RadioTower, ShieldCheck, ShieldOff, Workflow } from 'lucide-react';
+import { Bell, CheckCircle2, FileText, MessageCircle, RadioTower, ShieldCheck, ShieldOff, ThumbsUp, Workflow } from 'lucide-react';
 import { conNegritas } from '../utils/texto.jsx';
 
 const ETIQUETAS = {
@@ -8,6 +8,7 @@ const ETIQUETAS = {
   consentimiento_firmado: 'Firmaste la autorización',
   consentimiento_revocado: 'Revocaste la autorización',
   oposicion_generada: 'El Gestor redactó la oposición',
+  consulta_reconocida: 'Confirmaste que reconocés esta consulta',
 };
 
 const ICONOS = {
@@ -17,6 +18,7 @@ const ICONOS = {
   consentimiento_firmado: ShieldCheck,
   consentimiento_revocado: ShieldOff,
   oposicion_generada: FileText,
+  consulta_reconocida: ThumbsUp,
 };
 
 export function LineaTiempo({ eventos }) {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { obtenerCaso } from '../api/casos';
+import { obtenerCaso, reconocerCaso } from '../api/casos';
 import { firmarConsentimiento, revocarConsentimiento } from '../api/consentimientos';
 import { SesionExpiradaError } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -17,6 +17,7 @@ export function useCaso(id) {
   const [cargando, setCargando] = useState(true);
   const [firmando, setFirmando] = useState(false);
   const [revocando, setRevocando] = useState(false);
+  const [reconociendo, setReconociendo] = useState(false);
   const { sesionExpirada } = useAuth();
   const { mostrarToast } = useToast();
 
@@ -54,7 +55,7 @@ export function useCaso(id) {
   }, [cargar]);
 
   useEffect(() => {
-    if (!caso || caso.estado === 'resuelto') return undefined;
+    if (!caso || caso.estado === 'resuelto' || caso.estado === 'descartado') return undefined;
 
     const intervalo = setInterval(() => cargar({ enSilencio: true }), 4000);
     return () => clearInterval(intervalo);
@@ -86,5 +87,18 @@ export function useCaso(id) {
     }
   }
 
-  return { caso, error, cargando, firmando, revocando, recargar: cargar, firmar, revocar };
+  async function reconocer() {
+    setReconociendo(true);
+    try {
+      await reconocerCaso(id);
+      await cargar();
+      mostrarToast('Listo, quedó marcada como reconocida.');
+    } catch (err) {
+      setError(err);
+    } finally {
+      setReconociendo(false);
+    }
+  }
+
+  return { caso, error, cargando, firmando, revocando, reconociendo, recargar: cargar, firmar, revocar, reconocer };
 }

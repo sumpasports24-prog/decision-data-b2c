@@ -12,8 +12,9 @@ import { LineaTiempo } from '../components/LineaTiempo';
 
 export function CasoPage() {
   const { id } = useParams();
-  const { caso, error, cargando, firmando, revocando, recargar, firmar, revocar } = useCaso(id);
+  const { caso, error, cargando, firmando, revocando, reconociendo, recargar, firmar, revocar, reconocer } = useCaso(id);
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
+  const [mostrarDisputa, setMostrarDisputa] = useState(false);
   const [contexto, setContexto] = useState('');
 
   if (cargando) {
@@ -81,9 +82,27 @@ export function CasoPage() {
 
           <div className="columnas">
             <div className="columna-flexible">
-              {caso.estado === 'notificado' && (
+              {caso.estado === 'notificado' && !mostrarDisputa && (
+                <section className="tarjeta" style={{ borderColor: 'var(--ambar)', display: 'grid', gap: 14 }}>
+                  <strong>{caso.consulta.entidad_nombre} revisó tu historial. ¿La reconocés?</strong>
+                  <p className="texto-secundario" style={{ margin: 0, fontSize: '0.9rem' }}>
+                    Motivo declarado: {caso.consulta.motivo}
+                  </p>
+                  {error && <EstadoFalla error={error} onReintentar={reconocer} />}
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    <button type="button" className="boton boton--primario" onClick={reconocer} disabled={reconociendo}>
+                      {reconociendo ? 'Confirmando…' : 'Sí, fui yo'}
+                    </button>
+                    <button type="button" className="boton boton--secundario" onClick={() => setMostrarDisputa(true)}>
+                      Yo no autoricé esto
+                    </button>
+                  </div>
+                </section>
+              )}
+
+              {caso.estado === 'notificado' && mostrarDisputa && (
                 <section className="tarjeta" style={{ borderColor: 'var(--ambar)', display: 'grid', gap: 12 }}>
-                  <strong>Esta consulta no la reconociste. ¿Autorizas a Decision Data a gestionarla por ti?</strong>
+                  <strong>¿Autorizás a Decision Data a gestionarla por ti?</strong>
                   <p className="texto-secundario" style={{ margin: 0, fontSize: '0.9rem' }}>
                     Autorizo a Decision Data a presentar, en mi nombre, una oposición al tratamiento de
                     datos personales (LOPDP) ante la entidad reportante de este caso, y a dar seguimiento
@@ -120,9 +139,23 @@ export function CasoPage() {
                     </span>
                   </label>
                   {error && <EstadoFalla error={error} onReintentar={() => firmar(contexto)} />}
-                  <button type="button" className="boton boton--primario" onClick={() => firmar(contexto)} disabled={firmando}>
-                    {firmando ? 'Firmando…' : 'Autorizar a Decision Data'}
-                  </button>
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    <button type="button" className="boton boton--primario" onClick={() => firmar(contexto)} disabled={firmando}>
+                      {firmando ? 'Firmando…' : 'Autorizar a Decision Data'}
+                    </button>
+                    <button type="button" className="boton boton--secundario" onClick={() => setMostrarDisputa(false)}>
+                      Volver
+                    </button>
+                  </div>
+                </section>
+              )}
+
+              {caso.estado === 'descartado' && (
+                <section className="tarjeta" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <ShieldCheck size={18} color="var(--verde)" aria-hidden="true" />
+                  <p className="texto-secundario" style={{ margin: 0, fontSize: '0.9rem' }}>
+                    Confirmaste que reconocés esta consulta. No hace falta ninguna acción más.
+                  </p>
                 </section>
               )}
 

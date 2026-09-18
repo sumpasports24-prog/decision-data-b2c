@@ -7,3 +7,7 @@ export function listarCasos() {
 export function obtenerCaso(id) {
   return apiFetch(`/casos/${id}`);
 }
+
+export function reconocerCaso(id) {
+  return apiFetch(`/casos/${id}/reconocer`, { method: 'POST' });
+}

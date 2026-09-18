@@ -5,6 +5,7 @@ const ETIQUETAS = {
   en_gestion: 'En gestión',
   escalado: 'Escalado',
   resuelto: 'Resuelto',
+  descartado: 'Descartado — la reconociste',
 };
 
 export function EstadoBadge({ estado }) {

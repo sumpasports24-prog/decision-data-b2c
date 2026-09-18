@@ -27,9 +27,14 @@ Ver el brief completo de producto y arquitectura en [`docs/BRIEF-decision-data.m
 > consentimiento firmado y vigente para ese caso y esa entidad específica (probado con tests).
 
 ```
-detectado ──► notificado ──► autorizado ──► en_gestion ──┬──► resuelto
-                                                          └──► escalado ──► resuelto
+detectado ──► notificado ──┬──► autorizado ──► en_gestion ──┬──► resuelto
+                            │                                └──► escalado ──► resuelto
+                            └──► descartado   ("sí, fui yo" — sin consentimiento, sin Gestor)
 ```
+
+`descartado` es la rama corta y, en la práctica, la más frecuente: la mayoría de las consultas se
+reconocen. El caso de oposición (el resto del diagrama) es la excepción que justifica que el motor
+exista, no el camino más transitado. Ver `UC-01`/`UC-03` en el catálogo de casos de uso.
 
 ## Arquitectura
 
@@ -236,12 +241,12 @@ cd backend
 php artisan test
 ```
 
-43 tests, todos sobre el motor de casos y su superficie HTTP: transiciones inválidas, agente sin
+49 tests, todos sobre el motor de casos y su superficie HTTP: transiciones inválidas, agente sin
 consentimiento vigente, cálculo de días hábiles y vencimiento, escalamiento automático, bitácora
 inmutable, validación de cédula ecuatoriana (dígito verificador módulo 10, no solo formato), el
 contrato completo de las 6 herramientas del agente con tokens de alcance y expiración, que el
-contexto que escribe la persona se cita en el documento generado, y el desglose de factores del
-score.
+contexto que escribe la persona se cita en el documento generado, el desglose de factores del
+score, y el camino corto de reconocer una consulta (`descartado`).
 
 ```bash
 cd frontend
@@ -268,20 +273,23 @@ npm run build                     # falla si hay errores de compilación/import
    php artisan centinela:ejecutar
    ```
    Refresca Panorama: aparece un cuarto caso para Banco del Austro en estado `notificado`.
-4. **Autorizar con contexto**: entra al caso de Cooperativa JEP, escribe algo en "contanos qué
-   recordás de esa fecha" (ej. *"yo nunca estuve en Cuenca, ni he pedido crédito en esa
-   cooperativa"*) y firma. El estado pasa a `autorizado` de inmediato; unos segundos después (cuando
-   el `worker` procesa `GestionarCasoJob`) pasa solo a `en_gestion` y el documento generado cita ese
-   texto textualmente. Para la comparación en vivo: repetir el mismo flujo con otro caso dejando el
-   campo vacío y mostrar que el documento no lo menciona.
-5. **Escalamiento en vivo**: el caso de Produbanco ya tiene `vence_en` en el pasado.
+4. **El camino frecuente — reconocer**: entra al caso de Banco del Austro. Ahí el sistema pregunta
+   "¿la reconocés?", no "autorizá esto". Click en **"Sí, fui yo"**: dos clics y el caso se cierra
+   como `descartado`, sin consentimiento ni Gestor de por medio — porque no hay nada que gestionar.
+   Es el camino que toma la mayoría de las consultas reales; el que sigue es la excepción.
+5. **El camino de disputa — autorizar con contexto**: entra al caso de Cooperativa JEP, click en
+   **"Yo no autoricé esto"**, escribe algo en "contanos qué recordás de esa fecha" (ej. *"yo nunca
+   estuve en Cuenca, ni he pedido crédito en esa cooperativa"*) y firma. El estado pasa a
+   `autorizado` de inmediato; unos segundos después (cuando el `worker` procesa `GestionarCasoJob`)
+   pasa solo a `en_gestion` y el documento generado cita ese texto textualmente.
+6. **Escalamiento en vivo**: el caso de Produbanco ya tiene `vence_en` en el pasado.
    ```bash
    php artisan casos:escalar-vencidos
    ```
    Refresca ese caso: pasa a `escalado`.
-6. **Revocar**: en cualquier caso con autorización vigente, el botón "Revocar" pide confirmación
+7. **Revocar**: en cualquier caso con autorización vigente, el botón "Revocar" pide confirmación
    antes de ejecutar.
-7. **Bitácora**: cada caso muestra su historial completo, append-only.
+8. **Bitácora**: cada caso muestra su historial completo, append-only.
 
 ## Seguridad y privacidad
 
@@ -303,17 +311,17 @@ npm run build                     # falla si hay errores de compilación/import
 
 ## Limitaciones conocidas y próximos pasos
 
-- **`consultas.reconocida` no tiene todavía una pantalla donde la persona lo decida ella misma.**
-  Es el campo que dispara todo el producto, y quien debe decidirlo es la persona (no el banco, ni
-  un documento que Decision Data no puede auditar: no tiene acceso a los papeles internos de la
-  entidad). Es un booleano **nullable de 3 estados**, a propósito: `null` = nadie la revisó todavía
-  (así nace toda consulta nueva), `true` = la persona la reconoce, `false` = la persona confirmó que
-  no — y el Centinela (`where('reconocida', false)`) solo actúa sobre ese tercer estado explícito,
-  nunca sobre `null`. Así una consulta recién llegada no dispara ni alerta ni caso hasta que alguien
-  diga algo. Hoy ese valor solo lo pone el seeder de demo; en producción, `HuellaPage.jsx` tendría un
-  control "¿reconocés esta consulta?" por cada fila, y esa respuesta —no un webhook del banco— es la
-  que alimentaría al Centinela. Es la pieza que falta para que el flujo sea autosuficiente de punta
-  a punta, no solo demostrable con datos sembrados.
+- **`consultas.reconocida` solo tiene pantalla real una vez que ya hay un caso abierto.** Es un
+  booleano **nullable de 3 estados**: `null` = nadie la revisó todavía (así nace toda consulta
+  nueva), `true` = la persona la reconoce, `false` = la persona confirmó que no. El Centinela
+  (`where('reconocida', false)`) solo actúa sobre ese tercer estado explícito, nunca sobre `null` —
+  una consulta recién llegada no dispara nada hasta que alguien diga algo. Una vez que el Centinela
+  abre el caso, la persona ya tiene control real para decidir: "Sí, fui yo" (`POST
+  /casos/{caso}/reconocer`, pasa a `descartado`) o "Yo no autoricé esto" (dispara la oposición). Lo
+  que **todavía no existe** es un control en `HuellaPage.jsx` para decidir sobre una consulta que
+  llegó en `null` **antes** de que el Centinela la toque — hoy ese valor de arranque solo lo pone el
+  seeder de demo. Es la pieza que falta para que el flujo sea autosuficiente de punta a punta desde
+  el primer día de una consulta, no solo una vez que ya se convirtió en caso.
 - Solo se implementa un tipo de caso: consulta no reconocida → oposición LOPDP. Los demás quedan
   definidos en el modelo (`casos.tipo`) sin implementar.
 - El agente **Vocero** (llamadas telefónicas a la entidad) es **fase 2, no implementado**. Existe
@@ -335,7 +343,7 @@ npm run build                     # falla si hay errores de compilación/import
   entorno.
 - El logo (`frontend/src/assets/marca/dd-lockup-white.png`) se descargó directamente de
   `decisiondata.ec` y se usa sin modificar, tal como pide el enunciado.
-- Sin tests end-to-end de frontend (Playwright/Cypress) por tiempo; sí hay 43 tests de backend
+- Sin tests end-to-end de frontend (Playwright/Cypress) por tiempo; sí hay 49 tests de backend
   sobre el motor, que es donde está el riesgo real.
 - **Descartado a propósito, no por falta de tiempo:** un "coach" de salud financiera con KPIs de
   score (metas, tendencias, consejos genéricos). Se evaluó y no se construyó porque es la misma

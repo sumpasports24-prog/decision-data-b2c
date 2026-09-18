@@ -244,6 +244,16 @@ a {
   display: none;
 }
 
+.stepper-descartado {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--verde);
+  background: rgba(53, 194, 127, 0.1);
+  border-radius: var(--radio-sm);
+  padding: 6px 10px;
+}
+
 @media (max-width: 560px) {
   .stepper--completo {
     display: none;
@@ -472,6 +482,11 @@ a.tarjeta--interna:focus-visible {
 .badge--resuelto {
   background: rgba(53, 194, 127, 0.15);
   color: var(--verde);
+}
+
+.badge--descartado {
+  background: rgba(148, 162, 204, 0.15);
+  color: var(--texto-secundario);
 }
 
 @keyframes pulso {

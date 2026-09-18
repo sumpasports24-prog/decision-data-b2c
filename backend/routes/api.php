@@ -16,6 +16,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/casos', [CasoController::class, 'index']);
     Route::get('/casos/{caso}', [CasoController::class, 'show']);
+    Route::post('/casos/{caso}/reconocer', [CasoController::class, 'reconocer']);
     Route::post('/casos/{caso}/consentimiento', [ConsentimientoController::class, 'firmar']);
 
     Route::post('/consentimientos/{consentimiento}/revocar', [ConsentimientoController::class, 'revocar']);

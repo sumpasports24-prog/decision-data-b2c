@@ -15,8 +15,8 @@ import { estadoReconocimiento } from '../utils/reconocimiento';
 export function PanoramaPage() {
   const { datos, error, cargando, ultimaActualizacion, recargar } = usePanorama();
 
-  const casosActivos = datos?.casos.filter((c) => c.estado !== 'resuelto') ?? [];
-  const casosResueltos = datos?.casos.filter((c) => c.estado === 'resuelto') ?? [];
+  const casosActivos = datos?.casos.filter((c) => c.estado !== 'resuelto' && c.estado !== 'descartado') ?? [];
+  const casosCerrados = datos?.casos.filter((c) => c.estado === 'resuelto' || c.estado === 'descartado') ?? [];
 
   return (
     <div className="con-nav-inferior">
@@ -55,14 +55,14 @@ export function PanoramaPage() {
                     <AlertTriangle size={20} color="var(--fondo)" aria-hidden="true" />
                   </span>
                   <div>
-                    <strong>Hay una consulta que no reconociste</strong>
+                    <strong>Hay una consulta por revisar</strong>
                     <p className="texto-secundario" style={{ margin: '3px 0 0', fontSize: '0.9rem' }}>
-                      {caso.consulta?.entidad_nombre} revisó tu historial. Tú no reconociste esa consulta.
+                      {caso.consulta?.entidad_nombre} revisó tu historial. Confirmá si la reconocés.
                     </p>
                   </div>
                 </div>
                 <Link to={`/casos/${caso.id}`} className="boton boton--primario" style={{ background: 'var(--ambar)' }}>
-                  Revisar el caso
+                  Revisar
                 </Link>
               </section>
             ))}
@@ -168,32 +168,36 @@ export function PanoramaPage() {
                     casosActivos.map((caso) => <TarjetaCaso key={caso.id} caso={caso} />)
                   )}
 
-                  {casosResueltos.map((caso) => (
-                    <div
-                      key={caso.id}
-                      className="tarjeta--interna"
-                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}
-                    >
-                      <div>
-                        <div className="mono texto-secundario" style={{ fontSize: '0.72rem' }}>
-                          {caso.codigo}
-                        </div>
-                        <strong style={{ fontSize: '0.95rem' }}>{caso.consulta?.entidad_nombre}</strong>
-                      </div>
-                      <span
-                        style={{
-                          fontSize: '0.72rem',
-                          fontWeight: 600,
-                          color: 'var(--verde)',
-                          border: '1px solid var(--verde)',
-                          borderRadius: 999,
-                          padding: '4px 10px',
-                        }}
+                  {casosCerrados.map((caso) => {
+                    const esResuelto = caso.estado === 'resuelto';
+                    const color = esResuelto ? 'var(--verde)' : 'var(--texto-secundario)';
+                    return (
+                      <div
+                        key={caso.id}
+                        className="tarjeta--interna"
+                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}
                       >
-                        RESUELTO
-                      </span>
-                    </div>
-                  ))}
+                        <div>
+                          <div className="mono texto-secundario" style={{ fontSize: '0.72rem' }}>
+                            {caso.codigo}
+                          </div>
+                          <strong style={{ fontSize: '0.95rem' }}>{caso.consulta?.entidad_nombre}</strong>
+                        </div>
+                        <span
+                          style={{
+                            fontSize: '0.72rem',
+                            fontWeight: 600,
+                            color,
+                            border: `1px solid ${color}`,
+                            borderRadius: 999,
+                            padding: '4px 10px',
+                          }}
+                        >
+                          {esResuelto ? 'RESUELTO' : 'DESCARTADO'}
+                        </span>
+                      </div>
+                    );
+                  })}
 
                   <div
                     style={{

@@ -11,6 +11,7 @@ const ETIQUETAS_ESTADO = {
   en_gestion: 'En gestión',
   escalado: 'Escalado',
   resuelto: 'Resuelto',
+  descartado: 'Descartado',
 };
 
 const INTERVALO_ACTUALIZACION_MS = 8000;
